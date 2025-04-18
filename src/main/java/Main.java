@@ -1,5 +1,13 @@
+import migration.LiquibaseMigrator;
+import util.DatabaseConnection;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello, World!");
+        try {
+            LiquibaseMigrator.migrate();
+
+        } finally {
+            DatabaseConnection.closeConnection();
+        }
     }
 }
