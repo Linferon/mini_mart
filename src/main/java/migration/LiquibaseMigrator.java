@@ -9,25 +9,30 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 
 import java.sql.Connection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import util.DatabaseConnection;
 import util.LoggerUtil;
 
 public class LiquibaseMigrator {
-    private LiquibaseMigrator(){}
+    private LiquibaseMigrator() {
+    }
 
     public static void migrate() {
+        Logger liquibaseLogger = Logger.getLogger("liquibase");
+        liquibaseLogger.setLevel(Level.WARNING);
+
         try (Connection connection = DatabaseConnection.getConnection()) {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
 
             Liquibase liquibase = new Liquibase(
-                    "src/main/resources/db/changelog/master.yaml",
+                    "db/changelog/master.yaml",
                     new ClassLoaderResourceAccessor(),
                     database);
 
             liquibase.update(new Contexts(), new LabelExpression());
-            LoggerUtil.info("Database migration completed successfully");
         } catch (Exception e) {
             LoggerUtil.error("Error during database migration: " + e.getMessage());
             e.printStackTrace();

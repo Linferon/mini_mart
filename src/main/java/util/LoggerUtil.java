@@ -1,5 +1,6 @@
 package util;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.logging.*;
 
@@ -7,14 +8,24 @@ public class LoggerUtil {
     private LoggerUtil() {}
     private static final Logger LOGGER = Logger.getLogger(LoggerUtil.class.getName());
     private static FileHandler fileHandler;
+    private static final String LOG_DIR = "logs";
+    private static final String LOG_FILE = LOG_DIR + "/mini_mart.log";
 
     static {
         try {
-            fileHandler = new FileHandler("logs/mini_mart.log", true);
+            File logDir = new File(LOG_DIR);
+            if (!logDir.exists()) {
+                boolean created = logDir.mkdir();
+                if (!created) {
+                   LOGGER.severe("Не удалось создать директорию для логов: " + LOG_DIR);
+                }
+            }
+
+            fileHandler = new FileHandler(LOG_FILE, true);
             fileHandler.setFormatter(new SimpleFormatter());
             LOGGER.addHandler(fileHandler);
 
-            LOGGER.setLevel(Level.ALL);
+            LOGGER.setLevel(Level.INFO);
 
             LOGGER.setUseParentHandlers(false);
         } catch (IOException e) {
