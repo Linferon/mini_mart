@@ -11,7 +11,8 @@ public class Expense {
     private Timestamp expenseDate;
     private Long accountantId;
 
-    public Expense(Long categoryId, BigDecimal totalAmount, Timestamp expenseDate, Long accountantId) {
+    public Expense(Long id,Long categoryId, BigDecimal totalAmount, Timestamp expenseDate, Long accountantId) {
+        this.id = id;
         this.categoryId = categoryId;
         this.totalAmount = totalAmount;
         this.expenseDate = expenseDate;

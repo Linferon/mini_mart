@@ -6,7 +6,7 @@ import java.time.LocalDate;
 
 public class MonthlyBudget {
     private Long id;
-    private LocalDate date;
+    private LocalDate budgetDate;
     private BigDecimal plannedIncome;
     private BigDecimal plannedExpenses;
     private BigDecimal actualIncome;
@@ -16,9 +16,9 @@ public class MonthlyBudget {
     private Timestamp updatedAt;
     private Long directorId;
 
-    public MonthlyBudget(Long id, LocalDate date, BigDecimal plannedIncome, BigDecimal plannedExpenses, BigDecimal actualIncome, BigDecimal actualExpenses, BigDecimal netResult, Timestamp createdAt, Timestamp updatedAt, Long directorId) {
+    public MonthlyBudget(Long id, LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses, BigDecimal actualIncome, BigDecimal actualExpenses, BigDecimal netResult, Timestamp createdAt, Timestamp updatedAt, Long directorId) {
         this.id = id;
-        this.date = date;
+        this.budgetDate = budgetDate;
         this.plannedIncome = plannedIncome;
         this.plannedExpenses = plannedExpenses;
         this.actualIncome = actualIncome;
@@ -33,8 +33,8 @@ public class MonthlyBudget {
         return id;
     }
 
-    public LocalDate getDate() {
-        return date;
+    public LocalDate getBudgetDate() {
+        return budgetDate;
     }
 
     public BigDecimal getPlannedIncome() {
@@ -73,8 +73,8 @@ public class MonthlyBudget {
         this.id = id;
     }
 
-    public void setDate(LocalDate date) {
-        this.date = date;
+    public void setBudgetDate(LocalDate budgetDate) {
+        this.budgetDate = budgetDate;
     }
 
     public void setPlannedIncome(BigDecimal plannedIncome) {
