@@ -3,24 +3,24 @@ package model;
 import java.sql.Timestamp;
 
 public class Stock {
-    private Long productId;
+    private Product product;
     private Integer quantity;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public Stock(Long productId, Integer quantity, Timestamp createdAt, Timestamp updatedAt) {
-        this.productId = productId;
+    public Stock(Product product, Integer quantity, Timestamp createdAt, Timestamp updatedAt) {
+        this.product = product;
         this.quantity = quantity;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public Long getProductId() {
-        return productId;
+    public Product getProduct() {
+        return product;
     }
 
-    public void setProductId(Long productId) {
-        this.productId = productId;
+    public void setProduct(Product product) {
+        this.product = product;
     }
 
     public Integer getQuantity() {

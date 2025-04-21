@@ -14,9 +14,9 @@ public class MonthlyBudget {
     private BigDecimal netResult;
     private Timestamp createdAt;
     private Timestamp updatedAt;
-    private Long directorId;
+    private User director;
 
-    public MonthlyBudget(Long id, LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses, BigDecimal actualIncome, BigDecimal actualExpenses, BigDecimal netResult, Timestamp createdAt, Timestamp updatedAt, Long directorId) {
+    public MonthlyBudget(Long id, LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses, BigDecimal actualIncome, BigDecimal actualExpenses, BigDecimal netResult, Timestamp createdAt, Timestamp updatedAt, User director) {
         this.id = id;
         this.budgetDate = budgetDate;
         this.plannedIncome = plannedIncome;
@@ -26,7 +26,7 @@ public class MonthlyBudget {
         this.netResult = netResult;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.directorId = directorId;
+        this.director = director;
     }
 
     public Long getId() {
@@ -65,8 +65,8 @@ public class MonthlyBudget {
         return updatedAt;
     }
 
-    public Long getDirectorId() {
-        return directorId;
+    public User getDirector() {
+        return director;
     }
 
     public void setId(Long id) {
@@ -105,7 +105,7 @@ public class MonthlyBudget {
         this.updatedAt = updatedAt;
     }
 
-    public void setDirectorId(Long directorId) {
-        this.directorId = directorId;
+    public void setDirector(User director) {
+        this.director = director;
     }
 }

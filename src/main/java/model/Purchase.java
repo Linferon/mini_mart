@@ -5,17 +5,17 @@ import java.sql.Timestamp;
 
 public class Purchase {
     private Long id;
-    private Long productId;
+    private Product product;
     private Integer quantity;
-    private Long stockKeeperId;
+    private User stockKeeper;
     private Timestamp purchaseDate;
     private BigDecimal totalCost;
 
-    public Purchase(Long id, Long productId, Integer quantity, Long stockKeeperId, Timestamp purchaseDate, BigDecimal totalCost) {
+    public Purchase(Long id, Product product, Integer quantity, User stockKeeper, Timestamp purchaseDate, BigDecimal totalCost) {
         this.id = id;
-        this.productId = productId;
+        this.product = product;
         this.quantity = quantity;
-        this.stockKeeperId = stockKeeperId;
+        this.stockKeeper = stockKeeper;
         this.purchaseDate = purchaseDate;
         this.totalCost = totalCost;
     }
@@ -24,16 +24,16 @@ public class Purchase {
         return id;
     }
 
-    public Long getProductId() {
-        return productId;
+    public Product getProduct() {
+        return product;
     }
 
     public Integer getQuantity() {
         return quantity;
     }
 
-    public Long getStockKeeperId() {
-        return stockKeeperId;
+    public User getStockKeeper() {
+        return stockKeeper;
     }
 
     public Timestamp getPurchaseDate() {
@@ -48,16 +48,16 @@ public class Purchase {
         this.id = id;
     }
 
-    public void setProductId(Long productId) {
-        this.productId = productId;
+    public void setProduct(Product product) {
+        this.product = product;
     }
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 
-    public void setStockKeeperId(Long stockKeeperId) {
-        this.stockKeeperId = stockKeeperId;
+    public void setStockKeeper(User stockKeeper) {
+        this.stockKeeper = stockKeeper;
     }
 
     public void setPurchaseDate(Timestamp purchaseDate) {

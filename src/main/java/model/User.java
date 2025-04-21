@@ -8,17 +8,17 @@ public class User {
     private String surname;
     private String email;
     private String password;
-    private Long roleId;
+    private Role role;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public User(Long id, String name, String surname, String email, String password, Long roleId, Timestamp createdAt, Timestamp updatedAt) {
+    public User(Long id, String name, String surname, String email, String password, Role role, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.name = name;
         this.surname = surname;
         this.email = email;
         this.password = password;
-        this.roleId = roleId;
+        this.role = role;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -63,12 +63,12 @@ public class User {
         this.password = password;
     }
 
-    public Long getRoleId() {
-        return roleId;
+    public Role getRole() {
+        return role;
     }
 
-    public void setRoleId(Long roleId) {
-        this.roleId = roleId;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public Timestamp getCreatedAt() {

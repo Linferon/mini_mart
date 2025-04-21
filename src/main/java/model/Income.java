@@ -5,25 +5,25 @@ import java.sql.Timestamp;
 
 public class Income {
     private Long id;
-    private Long sourceId;
+    private IncomeSource source;
     private BigDecimal totalAmount;
     private Timestamp incomeDate;
-    private Long accountantId;
+    private User accountant;
 
-    public Income(Long id, Long sourceId, BigDecimal totalAmount, Timestamp incomeDate, Long accountantId) {
+    public Income(Long id, IncomeSource source, BigDecimal totalAmount, Timestamp incomeDate, User accountant) {
         this.id = id;
-        this.sourceId = sourceId;
+        this.source = source;
         this.totalAmount = totalAmount;
         this.incomeDate = incomeDate;
-        this.accountantId = accountantId;
+        this.accountant = accountant;
     }
 
     public Long getId() {
         return id;
     }
 
-    public Long getSourceId() {
-        return sourceId;
+    public IncomeSource getSource() {
+        return source;
     }
 
     public BigDecimal getTotalAmount() {
@@ -34,16 +34,16 @@ public class Income {
         return incomeDate;
     }
 
-    public Long getAccountantId() {
-        return accountantId;
+    public User getAccountant() {
+        return accountant;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setSourceId(Long sourceId) {
-        this.sourceId = sourceId;
+    public void setSource(IncomeSource source) {
+        this.source = source;
     }
 
     public void setTotalAmount(BigDecimal totalAmount) {
@@ -54,7 +54,7 @@ public class Income {
         this.incomeDate = incomeDate;
     }
 
-    public void setAccountantId(Long accountantId) {
-        this.accountantId = accountantId;
+    public void setAccountant(User accountant) {
+        this.accountant = accountant;
     }
 }

@@ -3,28 +3,27 @@ package model;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
-
 public class Expense {
     private Long id;
-    private Long categoryId;
+    private ExpenseCategory category;
     private BigDecimal totalAmount;
     private Timestamp expenseDate;
-    private Long accountantId;
+    private User accountant;
 
-    public Expense(Long id,Long categoryId, BigDecimal totalAmount, Timestamp expenseDate, Long accountantId) {
+    public Expense(Long id, ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate, User accountant) {
         this.id = id;
-        this.categoryId = categoryId;
+        this.category = category;
         this.totalAmount = totalAmount;
         this.expenseDate = expenseDate;
-        this.accountantId = accountantId;
+        this.accountant = accountant;
     }
 
     public Long getId() {
         return id;
     }
 
-    public Long getCategoryId() {
-        return categoryId;
+    public ExpenseCategory getCategory() {
+        return category;
     }
 
     public BigDecimal getTotalAmount() {
@@ -35,16 +34,16 @@ public class Expense {
         return expenseDate;
     }
 
-    public Long getAccountantId() {
-        return accountantId;
+    public User getAccountant() {
+        return accountant;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
+    public void setCategory(ExpenseCategory category) {
+        this.category = category;
     }
 
     public void setTotalAmount(BigDecimal totalAmount) {
@@ -55,7 +54,7 @@ public class Expense {
         this.expenseDate = expenseDate;
     }
 
-    public void setAccountantId(Long accountantId) {
-        this.accountantId = accountantId;
+    public void setAccountant(User accountant) {
+        this.accountant = accountant;
     }
 }

@@ -6,8 +6,8 @@ import java.time.LocalDate;
 
 public class Payroll {
     private Long id;
-    private Long employeeId;
-    private Long accountantId;
+    private User employee;
+    private User accountant;
     private Float hoursWorked;
     private BigDecimal hourlyRate;
     private BigDecimal totalAmount;
@@ -18,10 +18,10 @@ public class Payroll {
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public Payroll(Long id, Long employeeId, Long accountantId, Float hoursWorked, BigDecimal hourlyRate, BigDecimal totalAmount, LocalDate periodStart, LocalDate periodEnd, LocalDate paymentDate, Boolean isPaid, Timestamp createdAt, Timestamp updatedAt) {
+    public Payroll(Long id, User employee, User accountant, Float hoursWorked, BigDecimal hourlyRate, BigDecimal totalAmount, LocalDate periodStart, LocalDate periodEnd, LocalDate paymentDate, Boolean isPaid, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
-        this.employeeId = employeeId;
-        this.accountantId = accountantId;
+        this.employee = employee;
+        this.accountant = accountant;
         this.hoursWorked = hoursWorked;
         this.hourlyRate = hourlyRate;
         this.totalAmount = totalAmount;
@@ -37,12 +37,12 @@ public class Payroll {
         return id;
     }
 
-    public Long getEmployeeId() {
-        return employeeId;
+    public User getEmployee() {
+        return employee;
     }
 
-    public Long getAccountantId() {
-        return accountantId;
+    public User getAccountant() {
+        return accountant;
     }
 
     public Float getHoursWorked() {
@@ -69,7 +69,7 @@ public class Payroll {
         return paymentDate;
     }
 
-    public Boolean getPaid() {
+    public Boolean isPaid() {
         return isPaid;
     }
 
@@ -85,12 +85,12 @@ public class Payroll {
         this.id = id;
     }
 
-    public void setEmployeeId(Long employeeId) {
-        this.employeeId = employeeId;
+    public void setEmployee(User employee) {
+        this.employee = employee;
     }
 
-    public void setAccountantId(Long accountantId) {
-        this.accountantId = accountantId;
+    public void setAccountant(User accountant) {
+        this.accountant = accountant;
     }
 
     public void setHoursWorked(Float hoursWorked) {

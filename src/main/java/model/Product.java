@@ -6,16 +6,16 @@ import java.sql.Timestamp;
 public class Product {
     private Long id;
     private String name;
-    private Long categoryId;
+    private ProductCategory category;
     private BigDecimal buyPrice;
     private BigDecimal sellPrice;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public Product(Long id, String name, Long categoryId, BigDecimal buyPrice, BigDecimal sellPrice, Timestamp createdAt, Timestamp updatedAt) {
+    public Product(Long id, String name, ProductCategory category, BigDecimal buyPrice, BigDecimal sellPrice, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.name = name;
-        this.categoryId = categoryId;
+        this.category = category;
         this.buyPrice = buyPrice;
         this.sellPrice = sellPrice;
         this.createdAt = createdAt;
@@ -30,8 +30,8 @@ public class Product {
         return name;
     }
 
-    public Long getCategoryId() {
-        return categoryId;
+    public ProductCategory getCategory() {
+        return category;
     }
 
     public BigDecimal getBuyPrice() {
@@ -58,8 +58,8 @@ public class Product {
         this.name = name;
     }
 
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
+    public void setCategory(ProductCategory category) {
+        this.category = category;
     }
 
     public void setBuyPrice(BigDecimal buyPrice) {

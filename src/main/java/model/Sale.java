@@ -5,17 +5,17 @@ import java.sql.Timestamp;
 
 public class Sale {
     private Long id;
-    private Long productId;
+    private Product product;
     private Integer quantity;
-    private Long cashierId;
+    private User cashier;
     private BigDecimal totalAmount;
     private Timestamp saleDate;
 
-    public Sale(Long id, Long productId, Integer quantity, Long cashierId, BigDecimal totalAmount, Timestamp saleDate) {
+    public Sale(Long id, Product product, Integer quantity, User cashier, BigDecimal totalAmount, Timestamp saleDate) {
         this.id = id;
-        this.productId = productId;
+        this.product = product;
         this.quantity = quantity;
-        this.cashierId = cashierId;
+        this.cashier = cashier;
         this.totalAmount = totalAmount;
         this.saleDate = saleDate;
     }
@@ -24,16 +24,16 @@ public class Sale {
         return id;
     }
 
-    public Long getProductId() {
-        return productId;
+    public Product getProduct() {
+        return product;
     }
 
     public Integer getQuantity() {
         return quantity;
     }
 
-    public Long getCashierId() {
-        return cashierId;
+    public User getCashier() {
+        return cashier;
     }
 
     public BigDecimal getTotalAmount() {
@@ -48,16 +48,16 @@ public class Sale {
         this.id = id;
     }
 
-    public void setProductId(Long productId) {
-        this.productId = productId;
+    public void setProduct(Product product) {
+        this.product = product;
     }
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 
-    public void setCashierId(Long cashierId) {
-        this.cashierId = cashierId;
+    public void setCashier(User cashier) {
+        this.cashier = cashier;
     }
 
     public void setTotalAmount(BigDecimal totalAmount) {
