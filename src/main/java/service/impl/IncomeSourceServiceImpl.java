@@ -16,7 +16,6 @@ public class IncomeSourceServiceImpl implements IncomeSourceService {
     private final IncomeSourceDao sourceDao = new IncomeSourceDao();
     private final UserService userService = new UserServiceImpl();
 
-    private static final String ROLE_ADMIN = "Администратор";
     private static final String ROLE_DIRECTOR = "Директор";
     private static final String ROLE_ACCOUNTANT = "Бухгалтер";
 
@@ -61,8 +60,8 @@ public class IncomeSourceServiceImpl implements IncomeSourceService {
     private void checkManagementPermission() {
         checkAuthentication();
         
-        if (!userService.hasRole(ROLE_ADMIN, ROLE_DIRECTOR, ROLE_ACCOUNTANT)) {
-            throw new AuthorizationException("Только администратор, директор или бухгалтер может управлять источниками дохода");
+        if (!userService.hasRole(ROLE_DIRECTOR, ROLE_ACCOUNTANT)) {
+            throw new AuthorizationException("Только директор или бухгалтер может управлять источниками дохода");
         }
     }
 }

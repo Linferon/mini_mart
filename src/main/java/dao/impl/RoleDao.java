@@ -24,23 +24,4 @@ public class RoleDao extends Dao<Role> {
         String sql = "SELECT * FROM " + getTableName() + " WHERE NAME = ?";
         return querySingle(sql, name);
     }
-
-    public Long save(Role role) {
-        if (role.getId() == null) {
-            String sql = "INSERT INTO " + getTableName() + " (NAME) VALUES (?)";
-            Long id = insert(sql, role.getName());
-            if (id != null) {
-                role.setId(id);
-            }
-            return id;
-        } else {
-            boolean updated = update(role);
-            return updated ? role.getId() : null;
-        }
-    }
-
-    public boolean update(Role role) {
-        String sql = "UPDATE " + getTableName() + " SET NAME = ? WHERE ID = ?";
-        return update(sql, role.getName(), role.getId());
-    }
 }
