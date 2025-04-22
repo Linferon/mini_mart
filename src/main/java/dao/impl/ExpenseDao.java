@@ -68,13 +68,4 @@ public class ExpenseDao extends Dao<Expense> {
                 expense.getAccountant().getId(),
                 expense.getId());
     }
-
-    public List<Expense> findAllWithDetails() {
-        String sql = "SELECT e.*, c.NAME as CATEGORY_NAME, " +
-                     "u.NAME as USER_NAME, u.SURNAME as USER_SURNAME " +
-                     "FROM " + getTableName() + " e " +
-                     "JOIN EXPENSE_CATEGORIES c ON e.CATEGORY_ID = c.ID " +
-                     "JOIN USERS u ON e.ACCOUNTANT_ID = u.ID";
-        return queryList(sql);
-    }
 }
