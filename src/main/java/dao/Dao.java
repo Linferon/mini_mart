@@ -29,7 +29,7 @@ public abstract class Dao<T> {
                 }
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Error executing query: " + sql, e);
+            LoggerUtil.error("Ошибка при выполнении запроса: " + sql, e);
         }
 
         return Optional.empty();
@@ -47,7 +47,7 @@ public abstract class Dao<T> {
                 }
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Error executing query: " + sql, e);
+            LoggerUtil.error("Ошибка при выполнении запроса: " + sql, e);
         }
 
         return result;
@@ -60,18 +60,18 @@ public abstract class Dao<T> {
             int affectedRows = pstmt.executeUpdate();
 
             if (affectedRows == 0) {
-                throw new SQLException("Creating record failed, no rows affected.");
+                throw new SQLException("Создание записи не удалось, строки не затронуты.");
             }
 
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     return generatedKeys.getLong(1);
                 } else {
-                    throw new SQLException("Creating record failed, no ID obtained.");
+                    throw new SQLException("Создание записи не удалось, ID не получен.");
                 }
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Error executing insert: " + sql, e);
+            LoggerUtil.error("Ошибка при выполнении вставки: " + sql, e);
         }
 
         return null;
@@ -84,7 +84,7 @@ public abstract class Dao<T> {
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
-            LoggerUtil.error("Error executing update: " + sql, e);
+            LoggerUtil.error("Ошибка при обновлении: " + sql, e);
             return false;
         }
     }

@@ -22,32 +22,31 @@ public class ExpenseDao extends Dao<Expense> {
         return ExpenseMapper::mapRow;
     }
 
-    
     public List<Expense> findByCategory(Long categoryId) {
         String sql = "SELECT * FROM " + getTableName() + " WHERE CATEGORY_ID = ?";
         return queryList(sql, categoryId);
     }
-    
+
     public List<Expense> findByAccountant(Long accountantId) {
         String sql = "SELECT * FROM " + getTableName() + " WHERE ACCOUNTANT_ID = ?";
         return queryList(sql, accountantId);
     }
-    
+
     public List<Expense> findByDateRange(Timestamp startDate, Timestamp endDate) {
         String sql = "SELECT * FROM " + getTableName() + " WHERE EXPENSE_DATE BETWEEN ? AND ?";
         return queryList(sql, startDate, endDate);
     }
-    
+
     public Long save(Expense expense) {
         if (expense.getId() == null) {
-            String sql = "INSERT INTO " + getTableName() + 
-                         " (CATEGORY_ID, TOTAL_AMOUNT, EXPENSE_DATE, ACCOUNTANT_ID) " +
-                         "VALUES (?, ?, ?, ?)";
-            Long id = insert(sql, 
-                         expense.getCategoryId(),
-                         expense.getTotalAmount(),
-                         Timestamp.from(Instant.now()),
-                         expense.getAccountantId());
+            String sql = "INSERT INTO " + getTableName() +
+                    " (CATEGORY_ID, TOTAL_AMOUNT, EXPENSE_DATE, ACCOUNTANT_ID) " +
+                    "VALUES (?, ?, ?, ?)";
+            Long id = insert(sql,
+                    expense.getCategory().getId(),
+                    expense.getTotalAmount(),
+                    expense.getExpenseDate() != null ? expense.getExpenseDate() : Timestamp.from(Instant.now()),
+                    expense.getAccountant().getId());
             if (id != null) {
                 expense.setId(id);
             }
@@ -57,19 +56,19 @@ public class ExpenseDao extends Dao<Expense> {
             return updated ? expense.getId() : null;
         }
     }
-    
+
     public boolean update(Expense expense) {
-        String sql = "UPDATE " + getTableName() + 
-                     " SET CATEGORY_ID = ?, TOTAL_AMOUNT = ?, " +
-                     "EXPENSE_DATE = ?, ACCOUNTANT_ID = ? WHERE ID = ?";
+        String sql = "UPDATE " + getTableName() +
+                " SET CATEGORY_ID = ?, TOTAL_AMOUNT = ?, " +
+                "EXPENSE_DATE = ?, ACCOUNTANT_ID = ? WHERE ID = ?";
         return update(sql,
-                 expense.getCategoryId(),
-                 expense.getTotalAmount(),
-                 expense.getExpenseDate(),
-                 expense.getAccountantId(),
-                 expense.getId());
+                expense.getCategory().getId(),
+                expense.getTotalAmount(),
+                expense.getExpenseDate(),
+                expense.getAccountant().getId(),
+                expense.getId());
     }
-    
+
     public List<Expense> findAllWithDetails() {
         String sql = "SELECT e.*, c.NAME as CATEGORY_NAME, " +
                      "u.NAME as USER_NAME, u.SURNAME as USER_SURNAME " +

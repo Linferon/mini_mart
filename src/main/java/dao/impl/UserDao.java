@@ -21,6 +21,11 @@ public class UserDao extends Dao<User> {
         return UserMapper::mapRow;
     }
 
+    public List<User> findByName(String name) {
+        String sql = "SELECT * FROM USERS WHERE NAME like ?%";
+        return queryList(sql, name);
+    }
+
     public Optional<User> findByEmail(String email) {
         String sql = "SELECT * FROM " + getTableName() + " WHERE EMAIL = ?";
         return querySingle(sql, email);
@@ -44,7 +49,7 @@ public class UserDao extends Dao<User> {
                     user.getSurname(),
                     user.getEmail(),
                     user.getPassword(),
-                    user.getRoleId(),
+                    user.getRole().getId(),
                     user.getCreatedAt() != null ? user.getCreatedAt() : now,
                     user.getUpdatedAt() != null ? user.getUpdatedAt() : now);
 
@@ -71,18 +76,8 @@ public class UserDao extends Dao<User> {
                 user.getSurname(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getRoleId(),
+                user.getRole().getId(),
                 now,
                 user.getId());
     }
-
-    public boolean setUserStatus(Long id, boolean enabled) {
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-
-        String sql = "UPDATE " + getTableName() +
-                " SET ENABLED = ?, UPDATED_AT = ? WHERE ID = ?";
-
-        return update(sql, enabled, now, id);
-    }
-
 }

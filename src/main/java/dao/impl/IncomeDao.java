@@ -42,10 +42,10 @@ public class IncomeDao extends Dao<Income> {
                     " (SOURCE_ID, TOTAL_AMOUNT, INCOME_DATE, ACCOUNTANT_ID) " +
                     "VALUES (?, ?, ?, ?)";
             Long id = insert(sql,
-                    income.getSourceId(),
+                    income.getSource().getId(),
                     income.getTotalAmount(),
                     income.getIncomeDate(),
-                    income.getAccountantId());
+                    income.getAccountant().getId());
             if (id != null) {
                 income.setId(id);
             }
@@ -61,10 +61,10 @@ public class IncomeDao extends Dao<Income> {
                 " SET SOURCE_ID = ?, TOTAL_AMOUNT = ?, " +
                 "INCOME_DATE = ?, ACCOUNTANT_ID = ? WHERE ID = ?";
         return update(sql,
-                income.getSourceId(),
+                income.getSource().getId(),
                 income.getTotalAmount(),
                 income.getIncomeDate(),
-                income.getAccountantId(),
+                income.getAccountant().getId(),
                 income.getId());
     }
 }
