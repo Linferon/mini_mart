@@ -5,7 +5,7 @@ import model.ProductCategory;
 import dao.mapper.ProductCategoryMapper;
 
 import java.sql.ResultSet;
-import java.util.Optional;
+import java.util.List;
 import java.util.function.Function;
 
 public class ProductCategoryDao extends Dao<ProductCategory> {
@@ -20,27 +20,8 @@ public class ProductCategoryDao extends Dao<ProductCategory> {
         return ProductCategoryMapper::mapRow;
     }
     
-    public Optional<ProductCategory> findByName(String name) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE NAME = ?";
-        return querySingle(sql, name);
-    }
-    
-    public Long save(ProductCategory category) {
-        if (category.getId() == null) {
-            String sql = "INSERT INTO " + getTableName() + " (NAME) VALUES (?)";
-            Long id = insert(sql, category.getName());
-            if (id != null) {
-                category.setId(id);
-            }
-            return id;
-        } else {
-            boolean updated = update(category);
-            return updated ? category.getId() : null;
-        }
-    }
-    
-    public boolean update(ProductCategory category) {
-        String sql = "UPDATE " + getTableName() + " SET NAME = ? WHERE ID = ?";
-        return update(sql, category.getName(), category.getId());
+    public List<ProductCategory> findByName(String name) {
+        String sql = "SELECT * FROM " + getTableName() + " WHERE NAME like ?%";
+        return queryList(sql, name);
     }
 }
