@@ -28,7 +28,7 @@ public class ProductDao extends Dao<Product> {
 
     public List<Product> findByName(String name) {
         String sql = "SELECT * FROM " + getTableName() + " WHERE NAME LIKE ?";
-        return queryList(sql, "%" + name + "%");
+        return queryList(sql,  name + "%");
     }
 
     public Long save(Product product) {
@@ -71,7 +71,7 @@ public class ProductDao extends Dao<Product> {
     }
 
     public List<Product> findAllWithCategoryDetails() {
-        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
+        String sql = "SELECT p.*, c.* as CATEGORY " +
                 "FROM " + getTableName() + " p " +
                 "JOIN PRODUCT_CATEGORIES c ON p.CATEGORY_ID = c.ID";
         return queryList(sql);
