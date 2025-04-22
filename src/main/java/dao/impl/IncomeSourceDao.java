@@ -24,23 +24,4 @@ public class IncomeSourceDao extends Dao<IncomeSource> {
         String sql = "SELECT * FROM " + getTableName() + " WHERE NAME = ?";
         return querySingle(sql, name);
     }
-    
-    public Long save(IncomeSource source) {
-        if (source.getId() == null) {
-            String sql = "INSERT INTO " + getTableName() + " (NAME) VALUES (?)";
-            Long id = insert(sql, source.getName());
-            if (id != null) {
-                source.setId(id);
-            }
-            return id;
-        } else {
-            boolean updated = update(source);
-            return updated ? source.getId() : null;
-        }
-    }
-    
-    public boolean update(IncomeSource source) {
-        String sql = "UPDATE " + getTableName() + " SET NAME = ? WHERE ID = ?";
-        return update(sql, source.getName(), source.getId());
-    }
 }
