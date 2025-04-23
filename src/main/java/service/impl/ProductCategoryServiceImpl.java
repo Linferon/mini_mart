@@ -5,8 +5,8 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.CategoryNotFoundException;
 import model.ProductCategory;
-import service.ProductCategoryService;
-import service.UserService;
+import service.interfaces.ProductCategoryService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.util.List;

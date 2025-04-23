@@ -5,9 +5,9 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.ProductNotFoundException;
 import model.Product;
-import service.ProductCategoryService;
-import service.ProductService;
-import service.UserService;
+import service.interfaces.ProductCategoryService;
+import service.interfaces.ProductService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;

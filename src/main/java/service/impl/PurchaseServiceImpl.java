@@ -9,10 +9,10 @@ import model.Product;
 import model.Purchase;
 import model.Stock;
 import model.User;
-import service.ProductService;
-import service.PurchaseService;
-import service.StockService;
-import service.UserService;
+import service.interfaces.ProductService;
+import service.interfaces.PurchaseService;
+import service.interfaces.StockService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;

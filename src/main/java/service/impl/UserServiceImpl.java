@@ -5,7 +5,7 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.UserNotFoundException;
 import model.User;
-import service.UserService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.util.List;

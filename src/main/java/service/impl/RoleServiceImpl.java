@@ -5,8 +5,8 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.RoleNotFoundException;
 import model.Role;
-import service.RoleService;
-import service.UserService;
+import service.interfaces.RoleService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.util.List;

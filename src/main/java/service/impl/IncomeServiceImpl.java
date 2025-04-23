@@ -7,9 +7,9 @@ import exception.nsee.IncomeNotFoundException;
 import model.Income;
 import model.IncomeSource;
 import model.User;
-import service.IncomeService;
-import service.IncomeSourceService;
-import service.UserService;
+import service.interfaces.IncomeService;
+import service.interfaces.IncomeSourceService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;

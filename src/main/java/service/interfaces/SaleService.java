@@ -1,4 +1,4 @@
-package service;
+package service.interfaces;
 
 import model.Product;
 import model.Sale;

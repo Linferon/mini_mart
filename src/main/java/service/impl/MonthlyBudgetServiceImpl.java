@@ -5,8 +5,8 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.BudgetNotFoundException;
 import model.MonthlyBudget;
-import service.MonthlyBudgetService;
-import service.UserService;
+import service.interfaces.MonthlyBudgetService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;

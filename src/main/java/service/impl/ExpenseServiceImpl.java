@@ -7,9 +7,9 @@ import exception.nsee.ExpenseNotFoundException;
 import model.Expense;
 import model.ExpenseCategory;
 import model.User;
-import service.ExpenseCategoryService;
-import service.ExpenseService;
-import service.UserService;
+import service.interfaces.ExpenseCategoryService;
+import service.interfaces.ExpenseService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;

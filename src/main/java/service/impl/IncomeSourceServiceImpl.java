@@ -5,8 +5,8 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.SourceNotFoundException;
 import model.IncomeSource;
-import service.IncomeSourceService;
-import service.UserService;
+import service.interfaces.IncomeSourceService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.util.List;

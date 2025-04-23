@@ -5,9 +5,9 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.ProductNotFoundException;
 import model.Stock;
-import service.ProductService;
-import service.StockService;
-import service.UserService;
+import service.interfaces.ProductService;
+import service.interfaces.StockService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.sql.Timestamp;

@@ -5,8 +5,8 @@ import exception.AuthenticationException;
 import exception.AuthorizationException;
 import exception.nsee.CategoryNotFoundException;
 import model.ExpenseCategory;
-import service.ExpenseCategoryService;
-import service.UserService;
+import service.interfaces.ExpenseCategoryService;
+import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.util.List;
