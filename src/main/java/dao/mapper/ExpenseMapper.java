@@ -1,40 +1,44 @@
 package dao.mapper;
 
-import dao.impl.ExpenseCategoryDao;
-import dao.impl.UserDao;
 import exception.DatabaseMapException;
 import model.Expense;
 import model.ExpenseCategory;
 import model.User;
 import util.LoggerUtil;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 public class ExpenseMapper {
-    private static final ExpenseCategoryDao categoryDao = new ExpenseCategoryDao();
-    private static final UserDao userDao = new UserDao();
-
     private ExpenseMapper() {}
 
     public static Expense mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
             Long categoryId = rs.getLong("CATEGORY_ID");
+            BigDecimal totalAmount = rs.getBigDecimal("TOTAL_AMOUNT");
+            Timestamp expenseDate = rs.getTimestamp("EXPENSE_DATE");
             Long accountantId = rs.getLong("ACCOUNTANT_ID");
 
-            ExpenseCategory category = categoryDao.findById(categoryId)
-                    .orElse(new ExpenseCategory(categoryId, "Unknown Category"));
+            String  categoryName = rs.getString("CATEGORY_NAME");
+            String accountantName = rs.getString("ACCOUNTANT_NAME");
+            String accountantSurname = null;
 
-            User accountant = userDao.findById(accountantId)
-                    .orElse(new User(accountantId, "Unknown", "User", "", "", null,  null, null));
+            try {
+                accountantSurname = rs.getString("ACCOUNTANT_SURNAME");
+            } catch (SQLException ignored) {}
 
-            return new Expense(
-                    rs.getLong("ID"),
-                    category,
-                    rs.getBigDecimal("TOTAL_AMOUNT"),
-                    rs.getTimestamp("EXPENSE_DATE"),
-                    accountant
+            ExpenseCategory category = new ExpenseCategory(categoryId, categoryName);
+
+            User accountant = new User(
+                    accountantId,
+                    accountantName,
+                    accountantSurname
             );
+
+            return new Expense(id, category, totalAmount, expenseDate, accountant);
         } catch (SQLException e) {
             LoggerUtil.error("Error mapping expense from ResultSet", e);
             throw new DatabaseMapException("Error mapping expense");

@@ -1,36 +1,56 @@
 package dao.mapper;
 
-import dao.impl.UserDao;
 import exception.DatabaseMapException;
 import model.MonthlyBudget;
 import model.User;
 import util.LoggerUtil;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
 
 public class MonthlyBudgetMapper {
-    private static final UserDao userDao = new UserDao();
-
-    private MonthlyBudgetMapper() {}
+    private MonthlyBudgetMapper() {
+    }
 
     public static MonthlyBudget mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
+            LocalDate budgetDate = rs.getDate("BUDGET_DATE") != null ? rs.getDate("BUDGET_DATE").toLocalDate() : null;
+            BigDecimal plannedIncome = rs.getBigDecimal("PLANNED_INCOME");
+            BigDecimal plannedExpenses = rs.getBigDecimal("PLANNED_EXPENSES");
+            BigDecimal actualIncome = rs.getBigDecimal("ACTUAL_INCOME");
+            BigDecimal actualExpenses = rs.getBigDecimal("ACTUAL_EXPENSES");
+            BigDecimal netResult = rs.getBigDecimal("NET_RESULT");
+            Timestamp createdAt = rs.getTimestamp("CREATED_AT");
+            Timestamp updatedAt = rs.getTimestamp("UPDATED_AT");
             Long directorId = rs.getLong("DIRECTOR_ID");
 
-            User director = userDao.findById(directorId)
-                    .orElse(new User(directorId, "Unknown", "Director", "", "", null, null, null));
+            String directorName = rs.getString("DIRECTOR_NAME");
+            String directorSurname = null;
+
+            try {
+                directorSurname = rs.getString("DIRECTOR_SURNAME");
+            } catch (SQLException ignored) {
+            }
+
+            User director = new User(
+                    directorId,
+                    directorName,
+                    directorSurname);
 
             return new MonthlyBudget(
-                    rs.getLong("ID"),
-                    rs.getDate("BUDGET_DATE").toLocalDate(),
-                    rs.getBigDecimal("PLANNED_INCOME"),
-                    rs.getBigDecimal("PLANNED_EXPENSES"),
-                    rs.getBigDecimal("ACTUAL_INCOME"),
-                    rs.getBigDecimal("ACTUAL_EXPENSES"),
-                    rs.getBigDecimal("NET_RESULT"),
-                    rs.getTimestamp("CREATED_AT"),
-                    rs.getTimestamp("UPDATED_AT"),
+                    id,
+                    budgetDate,
+                    plannedIncome,
+                    plannedExpenses,
+                    actualIncome,
+                    actualExpenses,
+                    netResult,
+                    createdAt,
+                    updatedAt,
                     director
             );
         } catch (SQLException e) {

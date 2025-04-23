@@ -1,44 +1,45 @@
 package dao.mapper;
 
-import dao.impl.ProductDao;
-import dao.impl.UserDao;
 import exception.DatabaseMapException;
-import model.Product;
-import model.Sale;
-import model.User;
+import model.*;
 import util.LoggerUtil;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 public class SaleMapper {
-    private static final ProductDao productDao = new ProductDao();
-    private static final UserDao userDao = new UserDao();
-
-    private SaleMapper() {}
+    private SaleMapper() {
+    }
 
     public static Sale mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
             Long productId = rs.getLong("PRODUCT_ID");
+            Integer quantity = rs.getInt("QUANTITY");
             Long cashierId = rs.getLong("CASHIER_ID");
+            BigDecimal totalAmount = rs.getBigDecimal("TOTAL_AMOUNT");
+            Timestamp saleDate = rs.getTimestamp("SALE_DATE");
 
-            Product product = productDao.findById(productId)
-                    .orElse(new Product(productId, "Unknown Product", null, null, null, null, null));
+            String productName =  rs.getString("PRODUCT_NAME");
+            String productCategoryName = rs.getString("PRODUCT_CATEGORY_NAME");
+            String cashierName = rs.getString("CASHIER_NAME");
+            String cashierSurname = null;
 
-            User cashier = userDao.findById(cashierId)
-                    .orElse(new User(cashierId, "Unknown", "Cashier", "", "", null, null, null));
+            try {
+                cashierSurname = rs.getString("CASHIER_SURNAME");
+            } catch (SQLException ignored) {}
 
-            return new Sale(
-                    rs.getLong("ID"),
-                    product,
-                    rs.getInt("QUANTITY"),
-                    cashier,
-                    rs.getBigDecimal("TOTAL_AMOUNT"),
-                    rs.getTimestamp("SALE_DATE")
-            );
+            ProductCategory productCategory = new ProductCategory(null,productCategoryName);
+            Product product = new Product(productId, productName, productCategory);
+
+            User cashier = new User(cashierId, cashierName, cashierSurname);
+
+            return new Sale(id, product, quantity, cashier, totalAmount, saleDate);
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping sale from ResultSet", e);
-            throw new DatabaseMapException("Error mapping sale");
+            LoggerUtil.error("Error mapping expense from ResultSet", e);
+            throw new DatabaseMapException("Error mapping expense");
         }
     }
 }

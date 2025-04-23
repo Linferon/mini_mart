@@ -1,35 +1,33 @@
 package dao.mapper;
 
-import dao.impl.ProductCategoryDao;
 import exception.DatabaseMapException;
 import model.Product;
 import model.ProductCategory;
 import util.LoggerUtil;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 public class ProductMapper {
-    private static final ProductCategoryDao categoryDao = new ProductCategoryDao();
-
     private ProductMapper() {}
 
     public static Product mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
+            String name = rs.getString("NAME");
             Long categoryId = rs.getLong("CATEGORY_ID");
+            BigDecimal buyPrice = rs.getBigDecimal("BUY_PRICE");
+            BigDecimal sellPrice = rs.getBigDecimal("SELL_PRICE");
+            Timestamp createdAt = rs.getTimestamp("CREATED_AT");
+            Timestamp updatedAt = rs.getTimestamp("UPDATED_AT");
 
-            ProductCategory category = categoryDao.findById(categoryId)
-                    .orElse(new ProductCategory(categoryId, "Unknown Category"));
+            String categoryName = rs.getString("CATEGORY_NAME");
 
-            return new Product(
-                    rs.getLong("ID"),
-                    rs.getString("NAME"),
-                    category,
-                    rs.getBigDecimal("BUY_PRICE"),
-                    rs.getBigDecimal("SELL_PRICE"),
-                    rs.getTimestamp("CREATED_AT"),
-                    rs.getTimestamp("UPDATED_AT")
-            );
+            ProductCategory category = new ProductCategory(categoryId, categoryName);
+
+            return new Product(id, name, category, buyPrice, sellPrice, createdAt, updatedAt);
         } catch (SQLException e) {
             LoggerUtil.error("Error mapping product from ResultSet", e);
             throw new DatabaseMapException("Error mapping product");

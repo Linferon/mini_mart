@@ -1,41 +1,46 @@
 package dao.mapper;
 
-import dao.impl.ProductDao;
-import dao.impl.UserDao;
 import exception.DatabaseMapException;
 import model.Product;
 import model.Purchase;
 import model.User;
 import util.LoggerUtil;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 public class PurchaseMapper {
-    private static final ProductDao productDao = new ProductDao();
-    private static final UserDao userDao = new UserDao();
-
-    private PurchaseMapper() {}
+    private PurchaseMapper() {
+    }
 
     public static Purchase mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
             Long productId = rs.getLong("PRODUCT_ID");
+            Integer quantity = rs.getInt("QUANTITY");
             Long stockKeeperId = rs.getLong("STOCK_KEEPER_ID");
+            Timestamp purchaseDate = rs.getTimestamp("PURCHASE_DATE");
+            BigDecimal totalCost = rs.getBigDecimal("TOTAL_COST");
 
-            Product product = productDao.findById(productId)
-                    .orElse(new Product(productId, "Unknown Product", null, null, null, null, null));
+            String productName  = rs.getString("PRODUCT_NAME");
+            String stockKeeperName = rs.getString("STOCK_KEEPER_NAME");
+            String stockKeeperSurname = null;
 
-            User stockKeeper = userDao.findById(stockKeeperId)
-                    .orElse(new User(stockKeeperId, "Unknown", "StockKeeper", "", "", null, null, null));
+            try {
+                stockKeeperSurname = rs.getString("STOCK_KEEPER_SURNAME");
+            } catch (SQLException ignored) {}
 
-            return new Purchase(
-                    rs.getLong("ID"),
-                    product,
-                    rs.getInt("QUANTITY"),
-                    stockKeeper,
-                    rs.getTimestamp("PURCHASE_DATE"),
-                    rs.getBigDecimal("TOTAL_COST")
+            Product product = new Product(productId, productName);
+
+            User stockKeeper = new User(
+                    stockKeeperId,
+                    stockKeeperName,
+                    stockKeeperSurname
             );
+
+            return new Purchase(id, product, quantity, stockKeeper, purchaseDate, totalCost);
         } catch (SQLException e) {
             LoggerUtil.error("Error mapping purchase from ResultSet", e);
             throw new DatabaseMapException("Error mapping purchase");

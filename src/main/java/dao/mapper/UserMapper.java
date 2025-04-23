@@ -1,6 +1,5 @@
 package dao.mapper;
 
-import dao.impl.RoleDao;
 import exception.DatabaseMapException;
 import model.Role;
 import model.User;
@@ -8,27 +7,27 @@ import util.LoggerUtil;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 public class UserMapper {
-    private static final RoleDao roleDao = new RoleDao();
-
     private UserMapper() {}
 
     public static User mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
+            String name = rs.getString("NAME");
+            String surname = rs.getString("SURNAME");
+            String email = rs.getString("EMAIL");
+            String password = rs.getString("PASSWORD");
             Long roleId = rs.getLong("ROLE_ID");
-            Role role = roleDao.findById(roleId).orElse(new Role(roleId, "Unknown Role"));
+            Timestamp createdAt = rs.getTimestamp("CREATED_AT");
+            Timestamp updatedAt = rs.getTimestamp("UPDATED_AT");
 
-            return new User(
-                    rs.getLong("ID"),
-                    rs.getString("NAME"),
-                    rs.getString("SURNAME"),
-                    rs.getString("EMAIL"),
-                    rs.getString("PASSWORD"),
-                    role,
-                    rs.getTimestamp("CREATED_AT"),
-                    rs.getTimestamp("UPDATED_AT")
-            );
+            String roleName = rs.getString("ROLE_NAME");
+
+            Role role = new Role(roleId, roleName);
+
+            return new User(id, name, surname, email, password, role, createdAt, updatedAt);
         } catch (SQLException e) {
             LoggerUtil.error("Error mapping user from ResultSet", e);
             throw new DatabaseMapException("Error mapping user");

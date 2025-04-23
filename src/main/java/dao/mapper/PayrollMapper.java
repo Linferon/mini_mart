@@ -1,43 +1,81 @@
 package dao.mapper;
 
-import dao.impl.UserDao;
 import exception.DatabaseMapException;
 import model.Payroll;
 import model.User;
 import util.LoggerUtil;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
 
 public class PayrollMapper {
-    private static final UserDao userDao = new UserDao();
-
     private PayrollMapper() {}
 
     public static Payroll mapRow(ResultSet rs) {
         try {
+            Long id = rs.getLong("ID");
             Long employeeId = rs.getLong("EMPLOYEE_ID");
             Long accountantId = rs.getLong("ACCOUNTANT_ID");
+            Float hoursWorked = rs.getFloat("HOURS_WORKED");
+            BigDecimal hourlyRate = rs.getBigDecimal("HOURLY_RATE");
+            BigDecimal totalAmount = rs.getBigDecimal("TOTAL_AMOUNT");
 
-            User employee = userDao.findById(employeeId)
-                    .orElse(new User(employeeId, "Unknown", "Employee", "", "", null, null, null));
+            LocalDate periodStart = null;
+            if (rs.getDate("PERIOD_START") != null) {
+                periodStart = rs.getDate("PERIOD_START").toLocalDate();
+            }
 
-            User accountant = userDao.findById(accountantId)
-                    .orElse(new User(accountantId, "Unknown", "Accountant", "", "", null, null, null));
+            LocalDate periodEnd = null;
+            if (rs.getDate("PERIOD_END") != null) {
+                periodEnd = rs.getDate("PERIOD_END").toLocalDate();
+            }
+
+            LocalDate paymentDate = null;
+            if (rs.getDate("PAYMENT_DATE") != null) {
+                paymentDate = rs.getDate("PAYMENT_DATE").toLocalDate();
+            }
+
+            Boolean isPaid = rs.getBoolean("IS_PAID");
+            Timestamp createdAt = rs.getTimestamp("CREATED_AT");
+            Timestamp updatedAt = rs.getTimestamp("UPDATED_AT");
+
+            String employeeName = rs.getString("EMPLOYEE_NAME");
+            String employeeSurname = null;
+            String accountantName= rs.getString("ACCOUNTANT_NAME");
+            String accountantSurname = null;
+
+            try {
+                employeeSurname = rs.getString("EMPLOYEE_SURNAME");
+                accountantSurname = rs.getString("ACCOUNTANT_SURNAME");
+            } catch (SQLException ignored) {}
+
+            User employee = new User(
+                    employeeId,
+                    employeeName,
+                    employeeSurname
+            );
+
+            User accountant = new User(
+                    accountantId,
+                    accountantName,
+                    accountantSurname);
 
             return new Payroll(
-                    rs.getLong("ID"),
+                    id,
                     employee,
                     accountant,
-                    rs.getFloat("HOURS_WORKED"),
-                    rs.getBigDecimal("HOURLY_RATE"),
-                    rs.getBigDecimal("TOTAL_AMOUNT"),
-                    rs.getDate("PERIOD_START").toLocalDate(),
-                    rs.getDate("PERIOD_END").toLocalDate(),
-                    rs.getDate("PAYMENT_DATE").toLocalDate(),
-                    rs.getBoolean("IS_PAID"),
-                    rs.getTimestamp("CREATED_AT"),
-                    rs.getTimestamp("UPDATED_AT")
+                    hoursWorked,
+                    hourlyRate,
+                    totalAmount,
+                    periodStart,
+                    periodEnd,
+                    paymentDate,
+                    isPaid,
+                    createdAt,
+                    updatedAt
             );
         } catch (SQLException e) {
             LoggerUtil.error("Error mapping payroll from ResultSet", e);
