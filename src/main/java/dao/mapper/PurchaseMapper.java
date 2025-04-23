@@ -15,8 +15,7 @@ public class PurchaseMapper {
     private static final ProductDao productDao = new ProductDao();
     private static final UserDao userDao = new UserDao();
 
-    private PurchaseMapper() {
-    }
+    private PurchaseMapper() {}
 
     public static Purchase mapRow(ResultSet rs) {
         try {

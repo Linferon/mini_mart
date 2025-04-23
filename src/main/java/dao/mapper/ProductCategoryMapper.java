@@ -8,8 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ProductCategoryMapper {
-    private ProductCategoryMapper() {
-    }
+    private ProductCategoryMapper() {}
 
     public static ProductCategory mapRow(ResultSet rs) {
         try {

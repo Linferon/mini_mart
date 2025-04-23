@@ -15,8 +15,7 @@ public class SaleMapper {
     private static final ProductDao productDao = new ProductDao();
     private static final UserDao userDao = new UserDao();
 
-    private SaleMapper() {
-    }
+    private SaleMapper() {}
 
     public static Sale mapRow(ResultSet rs) {
         try {

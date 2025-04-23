@@ -12,8 +12,7 @@ import java.sql.SQLException;
 public class UserMapper {
     private static final RoleDao roleDao = new RoleDao();
 
-    private UserMapper() {
-    }
+    private UserMapper() {}
 
     public static User mapRow(ResultSet rs) {
         try {

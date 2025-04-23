@@ -69,11 +69,4 @@ public class ProductDao extends Dao<Product> {
                 now,
                 product.getId());
     }
-
-    public List<Product> findAllWithCategoryDetails() {
-        String sql = "SELECT p.*, c.* as CATEGORY " +
-                "FROM " + getTableName() + " p " +
-                "JOIN PRODUCT_CATEGORIES c ON p.CATEGORY_ID = c.ID";
-        return queryList(sql);
-    }
 }

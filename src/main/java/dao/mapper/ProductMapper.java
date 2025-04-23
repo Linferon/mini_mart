@@ -12,8 +12,7 @@ import java.sql.SQLException;
 public class ProductMapper {
     private static final ProductCategoryDao categoryDao = new ProductCategoryDao();
 
-    private ProductMapper() {
-    }
+    private ProductMapper() {}
 
     public static Product mapRow(ResultSet rs) {
         try {

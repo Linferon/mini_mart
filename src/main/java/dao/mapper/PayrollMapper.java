@@ -12,8 +12,7 @@ import java.sql.SQLException;
 public class PayrollMapper {
     private static final UserDao userDao = new UserDao();
 
-    private PayrollMapper() {
-    }
+    private PayrollMapper() {}
 
     public static Payroll mapRow(ResultSet rs) {
         try {

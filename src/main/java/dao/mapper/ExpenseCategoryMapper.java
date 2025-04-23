@@ -8,8 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ExpenseCategoryMapper {
-    private ExpenseCategoryMapper() {
-    }
+    private ExpenseCategoryMapper() {}
 
     public static ExpenseCategory mapRow(ResultSet rs) {
         try {

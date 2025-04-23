@@ -8,8 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class IncomeSourceMapper {
-    private IncomeSourceMapper() {
-    }
+    private IncomeSourceMapper() {}
 
     public static IncomeSource mapRow(ResultSet rs){
         try {

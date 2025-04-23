@@ -15,8 +15,7 @@ public class ExpenseMapper {
     private static final ExpenseCategoryDao categoryDao = new ExpenseCategoryDao();
     private static final UserDao userDao = new UserDao();
 
-    private ExpenseMapper() {
-    }
+    private ExpenseMapper() {}
 
     public static Expense mapRow(ResultSet rs) {
         try {

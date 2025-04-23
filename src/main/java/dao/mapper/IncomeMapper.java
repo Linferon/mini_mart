@@ -15,8 +15,7 @@ public class IncomeMapper {
     private static final IncomeSourceDao sourceDao = new IncomeSourceDao();
     private static final UserDao userDao = new UserDao();
 
-    private IncomeMapper() {
-    }
+    private IncomeMapper() {}
 
     public static Income mapRow(ResultSet rs) {
         try {

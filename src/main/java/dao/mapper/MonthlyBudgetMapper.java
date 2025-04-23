@@ -12,8 +12,7 @@ import java.sql.SQLException;
 public class MonthlyBudgetMapper {
     private static final UserDao userDao = new UserDao();
 
-    private MonthlyBudgetMapper() {
-    }
+    private MonthlyBudgetMapper() {}
 
     public static MonthlyBudget mapRow(ResultSet rs) {
         try {
