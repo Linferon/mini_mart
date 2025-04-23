@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.MonthlyBudgetDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.BudgetNotFoundException;
+import exception.nsee.BudgetNotFoundException;
 import model.MonthlyBudget;
 import service.MonthlyBudgetService;
 import service.UserService;

@@ -1,6 +1,6 @@
 package exception;
 
-public class StockUpdateException extends RuntimeException {
+public class  StockUpdateException extends IllegalArgumentException {
     public StockUpdateException(String message) {
         super(message);
     }

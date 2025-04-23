@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.UserDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.UserNotFoundException;
+import exception.nsee.UserNotFoundException;
 import model.User;
 import service.UserService;
 import util.LoggerUtil;

@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.ExpenseDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.ExpenseNotFoundException;
+import exception.nsee.ExpenseNotFoundException;
 import model.Expense;
 import model.ExpenseCategory;
 import model.User;

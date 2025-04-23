@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.PayrollDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.PayrollNotFoundException;
+import exception.nsee.PayrollNotFoundException;
 import model.Payroll;
 import model.User;
 import service.PayrollService;

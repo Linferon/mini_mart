@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.IncomeSourceDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.SourceNotFoundException;
+import exception.nsee.SourceNotFoundException;
 import model.IncomeSource;
 import service.IncomeSourceService;
 import service.UserService;

@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.RoleDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.RoleNotFoundException;
+import exception.nsee.RoleNotFoundException;
 import model.Role;
 import service.RoleService;
 import service.UserService;

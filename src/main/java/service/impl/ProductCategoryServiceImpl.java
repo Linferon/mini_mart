@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.ProductCategoryDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.CategoryNotFoundException;
+import exception.nsee.CategoryNotFoundException;
 import model.ProductCategory;
 import service.ProductCategoryService;
 import service.UserService;

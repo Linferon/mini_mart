@@ -3,7 +3,7 @@ package service.impl;
 import dao.impl.SaleDao;
 import exception.AuthenticationException;
 import exception.AuthorizationException;
-import exception.SaleNotFoundException;
+import exception.nsee.SaleNotFoundException;
 import exception.StockUpdateException;
 import model.Product;
 import model.Sale;
