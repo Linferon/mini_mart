@@ -9,11 +9,12 @@ import java.sql.Timestamp;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static dao.DbConstants.*;
 public class StockDao extends Dao<Stock> {
 
     @Override
     protected String getTableName() {
-        return "STOCK";
+        return STOCK_TABLE;
     }
 
     @Override
@@ -23,12 +24,26 @@ public class StockDao extends Dao<Stock> {
 
     @Override
     public Optional<Stock> findById(Long id) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE PRODUCT_ID = ?";
+        String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
+                "FROM " + STOCK_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID " +
+                "WHERE s.PRODUCT_ID = ?";
         return querySingle(sql, id);
     }
 
+    @Override
+    public java.util.List<Stock> findAll() {
+        String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
+                "FROM " + STOCK_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID";
+        return queryList(sql);
+    }
+
     public Optional<Stock> findByProductId(Long productId) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE PRODUCT_ID = ?";
+        String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
+                "FROM " + STOCK_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID " +
+                "WHERE s.PRODUCT_ID = ?";
         return querySingle(sql, productId);
     }
 
@@ -38,7 +53,7 @@ public class StockDao extends Dao<Stock> {
         Optional<Stock> existingStock = findByProductId(stock.getProduct().getId());
 
         if (existingStock.isEmpty()) {
-            String sql = "INSERT INTO " + getTableName() +
+            String sql = "INSERT INTO " + STOCK_TABLE +
                     " (PRODUCT_ID, QUANTITY, CREATED_AT, UPDATED_AT) " +
                     "VALUES (?, ?, ?, ?)";
             insert(sql,
@@ -57,7 +72,7 @@ public class StockDao extends Dao<Stock> {
     public boolean update(Stock stock) {
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
-        String sql = "UPDATE " + getTableName() +
+        String sql = "UPDATE " + STOCK_TABLE +
                 " SET QUANTITY = ?, UPDATED_AT = ? WHERE PRODUCT_ID = ?";
         return update(sql,
                 stock.getQuantity(),
@@ -67,12 +82,12 @@ public class StockDao extends Dao<Stock> {
 
     @Override
     public boolean deleteById(Long id) {
-        String sql = "DELETE FROM " + getTableName() + " WHERE PRODUCT_ID = ?";
+        String sql = "DELETE FROM " + STOCK_TABLE + " WHERE PRODUCT_ID = ?";
         return delete(sql, id);
     }
 
     public boolean deleteByProductId(Long productId) {
-        String sql = "DELETE FROM " + getTableName() + " WHERE PRODUCT_ID = ?";
+        String sql = "DELETE FROM " + STOCK_TABLE + " WHERE PRODUCT_ID = ?";
         return delete(sql, productId);
     }
 }

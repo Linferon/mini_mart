@@ -8,11 +8,12 @@ import java.sql.ResultSet;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static dao.DbConstants.ROLE_TABLE;
 public class RoleDao extends Dao<Role> {
 
     @Override
     protected String getTableName() {
-        return "ROLES";
+        return ROLE_TABLE;
     }
 
     @Override
@@ -21,7 +22,7 @@ public class RoleDao extends Dao<Role> {
     }
 
     public Optional<Role> findByName(String name) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE NAME = ?";
+        String sql = "SELECT * FROM " + ROLE_TABLE + " WHERE NAME = ?";
         return querySingle(sql, name);
     }
 }

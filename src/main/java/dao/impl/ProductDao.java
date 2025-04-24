@@ -7,13 +7,16 @@ import dao.mapper.ProductMapper;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
+
+import static dao.DbConstants.*;
 
 public class ProductDao extends Dao<Product> {
 
     @Override
     protected String getTableName() {
-        return "PRODUCTS";
+        return PRODUCT_TABLE;
     }
 
     @Override
@@ -21,13 +24,36 @@ public class ProductDao extends Dao<Product> {
         return ProductMapper::mapRow;
     }
 
+    @Override
+    public Optional<Product> findById(Long id) {
+        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
+                "FROM " + PRODUCT_TABLE + " p " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE +" c ON p.CATEGORY_ID = c.ID " +
+                "WHERE p.ID = ?";
+        return querySingle(sql, id);
+    }
+
+    @Override
+    public List<Product> findAll() {
+        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
+                "FROM " + PRODUCT_TABLE + " p " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " c ON p.CATEGORY_ID = c.ID";
+        return queryList(sql);
+    }
+
     public List<Product> findByCategory(Long categoryId) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE CATEGORY_ID = ?";
+        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
+                "FROM " + PRODUCT_TABLE + " p " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " c ON p.CATEGORY_ID = c.ID " +
+                "WHERE p.CATEGORY_ID = ?";
         return queryList(sql, categoryId);
     }
 
     public List<Product> findByName(String name) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE NAME LIKE ?";
+        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
+                "FROM " + PRODUCT_TABLE + " p " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE +" c ON p.CATEGORY_ID = c.ID " +
+                "WHERE p.NAME LIKE ?";
         return queryList(sql,  name + "%");
     }
 
@@ -35,7 +61,7 @@ public class ProductDao extends Dao<Product> {
         if (product.getId() == null) {
             Timestamp now = new Timestamp(System.currentTimeMillis());
 
-            String sql = "INSERT INTO " + getTableName() +
+            String sql = "INSERT INTO " + PRODUCT_TABLE +
                     " (NAME, CATEGORY_ID, BUY_PRICE, SELL_PRICE, CREATED_AT, UPDATED_AT) " +
                     "VALUES (?, ?, ?, ?, ?, ?)";
             Long id = insert(sql,
@@ -58,7 +84,7 @@ public class ProductDao extends Dao<Product> {
     public boolean update(Product product) {
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
-        String sql = "UPDATE " + getTableName() +
+        String sql = "UPDATE " + PRODUCT_TABLE +
                 " SET NAME = ?, CATEGORY_ID = ?, BUY_PRICE = ?, " +
                 "SELL_PRICE = ?, UPDATED_AT = ? WHERE ID = ?";
         return update(sql,

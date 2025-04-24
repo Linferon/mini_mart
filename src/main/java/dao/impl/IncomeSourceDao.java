@@ -7,12 +7,13 @@ import dao.mapper.IncomeSourceMapper;
 import java.sql.ResultSet;
 import java.util.Optional;
 import java.util.function.Function;
+import static dao.DbConstants.INCOME_SOURCE_TABLE;
 
 public class IncomeSourceDao extends Dao<IncomeSource> {
     
     @Override
     protected String getTableName() {
-        return "INCOME_SOURCES";
+        return INCOME_SOURCE_TABLE;
     }
     
     @Override
@@ -21,7 +22,7 @@ public class IncomeSourceDao extends Dao<IncomeSource> {
     }
     
     public Optional<IncomeSource> findByName(String name) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE NAME = ?";
+        String sql = "SELECT * FROM " + INCOME_SOURCE_TABLE + " WHERE NAME = ?";
         return querySingle(sql, name);
     }
 }

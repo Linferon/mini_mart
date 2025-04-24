@@ -7,13 +7,16 @@ import dao.mapper.SaleMapper;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
+
+import static dao.DbConstants.*;
 
 public class SaleDao extends Dao<Sale> {
 
     @Override
     protected String getTableName() {
-        return "SALES";
+        return SALE_TABLE;
     }
 
     @Override
@@ -21,24 +24,75 @@ public class SaleDao extends Dao<Sale> {
         return SaleMapper::mapRow;
     }
 
+    @Override
+    public Optional<Sale> findById(Long id) {
+        String sql = "SELECT s.*, " +
+                "p.NAME as PRODUCT_NAME, " +
+                "pc.NAME as PRODUCT_CATEGORY_NAME, " +
+                "u.NAME as CASHIER_NAME, u.SURNAME as CASHIER_SURNAME " +
+                "FROM " + SALE_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE +" p ON s.PRODUCT_ID = p.ID " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " pc ON p.CATEGORY_ID = pc.ID " +
+                "LEFT JOIN " + USER_TABLE + " u ON s.CASHIER_ID = u.ID " +
+                "WHERE s.ID = ?";
+        return querySingle(sql, id);
+    }
+
+    @Override
+    public List<Sale> findAll() {
+        String sql = "SELECT s.*, " +
+                "p.NAME as PRODUCT_NAME, " +
+                "pc.NAME as PRODUCT_CATEGORY_NAME, " +
+                "u.NAME as CASHIER_NAME, u.SURNAME as CASHIER_SURNAME " +
+                "FROM " + SALE_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE +" p ON s.PRODUCT_ID = p.ID " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " pc ON p.CATEGORY_ID = pc.ID " +
+                "LEFT JOIN " + USER_TABLE + " u ON s.CASHIER_ID = u.ID";
+        return queryList(sql);
+    }
+
     public List<Sale> findByProduct(Long productId) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE PRODUCT_ID = ?";
+        String sql = "SELECT s.*, " +
+                "p.NAME as PRODUCT_NAME, " +
+                "pc.NAME as PRODUCT_CATEGORY_NAME, " +
+                "u.NAME as CASHIER_NAME, u.SURNAME as CASHIER_SURNAME " +
+                "FROM " + SALE_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE +" p ON s.PRODUCT_ID = p.ID " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " pc ON p.CATEGORY_ID = pc.ID " +
+                "LEFT JOIN " + USER_TABLE + " u ON s.CASHIER_ID = u.ID " +
+                "WHERE s.PRODUCT_ID = ?";
         return queryList(sql, productId);
     }
 
     public List<Sale> findByCashier(Long cashierId) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE CASHIER_ID = ?";
+        String sql = "SELECT s.*, " +
+                "p.NAME as PRODUCT_NAME, " +
+                "pc.NAME as PRODUCT_CATEGORY_NAME, " +
+                "u.NAME as CASHIER_NAME, u.SURNAME as CASHIER_SURNAME " +
+                "FROM " + SALE_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE +" p ON s.PRODUCT_ID = p.ID " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " pc ON p.CATEGORY_ID = pc.ID " +
+                "LEFT JOIN " + USER_TABLE + " u ON s.CASHIER_ID = u.ID " +
+                "WHERE s.CASHIER_ID = ?";
         return queryList(sql, cashierId);
     }
 
     public List<Sale> findByDateRange(Timestamp startDate, Timestamp endDate) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE SALE_DATE BETWEEN ? AND ?";
+        String sql = "SELECT s.*, " +
+                "p.NAME as PRODUCT_NAME, " +
+                "pc.NAME as PRODUCT_CATEGORY_NAME, " +
+                "u.NAME as CASHIER_NAME, u.SURNAME as CASHIER_SURNAME " +
+                "FROM " + SALE_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE +" p ON s.PRODUCT_ID = p.ID " +
+                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " pc ON p.CATEGORY_ID = pc.ID " +
+                "LEFT JOIN " + USER_TABLE + " u ON s.CASHIER_ID = u.ID " +
+                "WHERE s.SALE_DATE BETWEEN ? AND ?";
         return queryList(sql, startDate, endDate);
     }
 
     public Long save(Sale sale) {
         if (sale.getId() == null) {
-            String sql = "INSERT INTO " + getTableName() +
+            String sql = "INSERT INTO " + SALE_TABLE +
                     " (PRODUCT_ID, QUANTITY, CASHIER_ID, TOTAL_AMOUNT, SALE_DATE) " +
                     "VALUES (?, ?, ?, ?, ?)";
             Long id = insert(sql,
@@ -58,7 +112,7 @@ public class SaleDao extends Dao<Sale> {
     }
 
     public boolean update(Sale sale) {
-        String sql = "UPDATE " + getTableName() +
+        String sql = "UPDATE " + SALE_TABLE +
                 " SET PRODUCT_ID = ?, QUANTITY = ?, CASHIER_ID = ?, " +
                 "TOTAL_AMOUNT = ?, SALE_DATE = ? WHERE ID = ?";
         return update(sql,

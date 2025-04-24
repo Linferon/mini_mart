@@ -8,11 +8,12 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.function.Function;
 
+import static dao.DbConstants.PRODUCT_CATEGORY_TABLE;
 public class ProductCategoryDao extends Dao<ProductCategory> {
     
     @Override
     protected String getTableName() {
-        return "PRODUCT_CATEGORIES";
+        return PRODUCT_CATEGORY_TABLE;
     }
     
     @Override
@@ -21,7 +22,7 @@ public class ProductCategoryDao extends Dao<ProductCategory> {
     }
     
     public List<ProductCategory> findByName(String name) {
-        String sql = "SELECT * FROM " + getTableName() + " WHERE NAME like ?%";
+        String sql = "SELECT * FROM " + PRODUCT_CATEGORY_TABLE + " WHERE NAME like ?%";
         return queryList(sql, name);
     }
 }
