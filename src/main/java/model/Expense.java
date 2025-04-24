@@ -1,14 +1,24 @@
 package model;
 
+import util.TableFormatter;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.format.DateTimeFormatter;
 
-public class Expense {
+public class Expense implements FormattableEntity {
     private Long id;
     private ExpenseCategory category;
     private BigDecimal totalAmount;
     private Timestamp expenseDate;
     private User accountant;
+
+    private static final int ID_WIDTH = 5;
+    private static final int CATEGORY_WIDTH = 25;
+    private static final int AMOUNT_WIDTH = 15;
+    private static final int DATE_WIDTH = 20;
+    private static final int ACCOUNTANT_WIDTH = 25;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public Expense(Long id, ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate, User accountant) {
         this.id = id;
@@ -18,40 +28,78 @@ public class Expense {
         this.accountant = accountant;
     }
 
+    @Override
+    public String toString() {
+        return "Расход" +
+                "\nid: " + id +
+                "\nкатегория: " + (category != null ? category.getName() : "не указана") +
+                "\nсумма: " + totalAmount +
+                "\nдата: " + (expenseDate != null ? expenseDate.toLocalDateTime().format(DATE_FORMATTER) : "не указана") +
+                "\nбухгалтер: " + (accountant != null ? accountant.getFullName() : "не указан");
+    }
+
+    @Override
+    public String getTableHeader() {
+        return TableFormatter.formatCell("ID", ID_WIDTH) +
+                TableFormatter.formatCell("Категория", CATEGORY_WIDTH) +
+                TableFormatter.formatCell("Сумма", AMOUNT_WIDTH) +
+                TableFormatter.formatCell("Дата", DATE_WIDTH) +
+                TableFormatter.formatCell("Бухгалтер", ACCOUNTANT_WIDTH);
+    }
+
+    @Override
+    public String toTableRow() {
+        return TableFormatter.formatCell(id, ID_WIDTH) +
+                TableFormatter.formatCell(category != null ? category.getName() : "-", CATEGORY_WIDTH) +
+                TableFormatter.formatCell(totalAmount, AMOUNT_WIDTH) +
+                TableFormatter.formatCell(getFormattedExpenseDate(), DATE_WIDTH) +
+                TableFormatter.formatCell(accountant != null ? accountant.getFullName() : "-", ACCOUNTANT_WIDTH);
+    }
+
+    @Override
+    public String getTableDivider() {
+        return TableFormatter.createDivider(ID_WIDTH, CATEGORY_WIDTH, AMOUNT_WIDTH, DATE_WIDTH, ACCOUNTANT_WIDTH);
+    }
+
+    public String getFormattedExpenseDate() {
+        return expenseDate != null ?
+                expenseDate.toLocalDateTime().format(DATE_FORMATTER) : "-";
+    }
+
     public Long getId() {
         return id;
-    }
-
-    public ExpenseCategory getCategory() {
-        return category;
-    }
-
-    public BigDecimal getTotalAmount() {
-        return totalAmount;
-    }
-
-    public Timestamp getExpenseDate() {
-        return expenseDate;
-    }
-
-    public User getAccountant() {
-        return accountant;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
+    public ExpenseCategory getCategory() {
+        return category;
+    }
+
     public void setCategory(ExpenseCategory category) {
         this.category = category;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
     }
 
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
     }
 
+    public Timestamp getExpenseDate() {
+        return expenseDate;
+    }
+
     public void setExpenseDate(Timestamp expenseDate) {
         this.expenseDate = expenseDate;
+    }
+
+    public User getAccountant() {
+        return accountant;
     }
 
     public void setAccountant(User accountant) {
