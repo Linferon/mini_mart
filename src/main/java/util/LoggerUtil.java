@@ -33,14 +33,6 @@ public class LoggerUtil {
         }
     }
 
-    public static void setLogLevel(Level level) {
-        LOGGER.setLevel(level);
-    }
-
-    public static void debug(String message) {
-        LOGGER.fine(message);
-    }
-
     public static void info(String message) {
         LOGGER.info(message);
     }
@@ -50,6 +42,7 @@ public class LoggerUtil {
     }
 
     public static void error(String message) {
+        ConsoleUtil.printError(message);
         LOGGER.severe(message);
     }
 
