@@ -1,13 +1,8 @@
-import migration.LiquibaseMigrator;
-import util.DatabaseConnection;
+import controller.ApplicationController;
 
 public class Main {
     public static void main(String[] args) {
-        try {
-            LiquibaseMigrator.migrate();
-
-        } finally {
-            DatabaseConnection.closeConnection();
-        }
+        ApplicationController app = new ApplicationController();
+        app.run();
     }
 }
