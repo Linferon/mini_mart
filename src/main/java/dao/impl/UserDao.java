@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static dao.DbConstants.*;
+
 public class UserDao extends Dao<User> {
     @Override
     protected String getTableName() {
@@ -39,12 +40,28 @@ public class UserDao extends Dao<User> {
         return queryList(sql);
     }
 
+    public List<User> findActiveEmployees(){
+        String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
+                "FROM " + USER_TABLE + " u " +
+                "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID" +
+                " WHERE u.ENABLED = TRUE";
+        return queryList(sql);
+    }
+
     public List<User> findByName(String name) {
         String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
                 "FROM " + USER_TABLE + " u " +
                 "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID " +
                 "WHERE u.NAME LIKE ?";
         return queryList(sql, name + "%");
+    }
+
+    public List<User> findDismissedUsers() {
+        String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
+                "FROM " + USER_TABLE + " u " +
+                "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID " +
+                "WHERE u.ENABLED = FALSE ?";
+        return queryList(sql);
     }
 
     public Optional<User> findByEmail(String email) {
@@ -95,7 +112,7 @@ public class UserDao extends Dao<User> {
 
         String sql = "UPDATE " + USER_TABLE +
                 " SET NAME = ?, SURNAME = ?, EMAIL = ?, " +
-                "PASSWORD = ?, ROLE_ID = ?, UPDATED_AT = ? " +
+                "PASSWORD = ?, ENABLED = ?,  ROLE_ID = ?, UPDATED_AT = ? " +
                 "WHERE ID = ?";
 
         return update(sql,
@@ -103,6 +120,7 @@ public class UserDao extends Dao<User> {
                 user.getSurname(),
                 user.getEmail(),
                 user.getPassword(),
+                user.getEnabled(),
                 user.getRole().getId(),
                 now,
                 user.getId());

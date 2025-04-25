@@ -10,6 +10,7 @@ public class User implements FormattableEntity {
     private String surname;
     private String email;
     private String password;
+    private Boolean enabled;
     private Role role;
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -19,6 +20,7 @@ public class User implements FormattableEntity {
     private static final int SURNAME_WIDTH = 20;
     private static final int EMAIL_WIDTH = 30;
     private static final int ROLE_WIDTH = 15;
+    private static final int ENABLED_WIDTH = 10;
 
     public User(Long id, String name, String surname) {
         this.id = id;
@@ -26,10 +28,11 @@ public class User implements FormattableEntity {
         this.surname = surname;
     }
 
-    public User(Long id, String name, String surname, String email, String password, Role role, Timestamp createdAt, Timestamp updatedAt) {
+    public User(Long id, String name, String surname, String email, String password, Boolean enabled, Role role, Timestamp createdAt, Timestamp updatedAt) {
         this(id, name, surname);
         this.email = email;
         this.password = password;
+        this.enabled = enabled;
         this.role = role;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -39,7 +42,7 @@ public class User implements FormattableEntity {
     public String toString() {
         return "Сотрудник " +
                 "\nid: " + id +
-                "\nимя: " + name  +
+                "\nимя: " + name +
                 "\nфамилия: " + surname +
                 "\nemail: " + email +
                 "\nроль: " + (role != null ? role.getName() : "не указана");
@@ -51,7 +54,8 @@ public class User implements FormattableEntity {
                 TableFormatter.formatCell("Имя", NAME_WIDTH) +
                 TableFormatter.formatCell("Фамилия", SURNAME_WIDTH) +
                 TableFormatter.formatCell("Email", EMAIL_WIDTH) +
-                TableFormatter.formatCell("Роль", ROLE_WIDTH);
+                TableFormatter.formatCell("Роль", ROLE_WIDTH) +
+                TableFormatter.formatCell("Активен", ENABLED_WIDTH);
     }
 
     @Override
@@ -60,7 +64,8 @@ public class User implements FormattableEntity {
                 TableFormatter.formatCell(name, NAME_WIDTH) +
                 TableFormatter.formatCell(surname, SURNAME_WIDTH) +
                 TableFormatter.formatCell(email, EMAIL_WIDTH) +
-                TableFormatter.formatCell(role != null ? role.getName() : "-", ROLE_WIDTH);
+                TableFormatter.formatCell(role != null ? role.getName() : "-", ROLE_WIDTH) +
+                TableFormatter.formatCell(Boolean.TRUE.equals(enabled) ? "Активен" : "Уволен", ENABLED_WIDTH);
     }
 
     @Override
@@ -106,6 +111,14 @@ public class User implements FormattableEntity {
 
     public String getPassword() {
         return password;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 
     public void setPassword(String password) {
