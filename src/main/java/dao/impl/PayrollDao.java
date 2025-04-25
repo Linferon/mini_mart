@@ -47,26 +47,15 @@ public class PayrollDao extends Dao<Payroll> {
         return queryList(sql);
     }
 
-    public List<Payroll> findByEmployee(Long employeeId) {
+    public List<Payroll> findUnpaidPayrolls() {
         String sql = "SELECT p.*, " +
                 "e.NAME as EMPLOYEE_NAME, e.SURNAME as EMPLOYEE_SURNAME, " +
                 "a.NAME as ACCOUNTANT_NAME, a.SURNAME as ACCOUNTANT_SURNAME " +
                 "FROM " + PAYROLL_TABLE + " p " +
                 "LEFT JOIN " + USER_TABLE + " e ON p.EMPLOYEE_ID = e.ID " +
                 "LEFT JOIN " + USER_TABLE + " a ON p.ACCOUNTANT_ID = a.ID " +
-                "WHERE p.EMPLOYEE_ID = ?";
-        return queryList(sql, employeeId);
-    }
-
-    public List<Payroll> findByAccountant(Long accountantId) {
-        String sql = "SELECT p.*, " +
-                "e.NAME as EMPLOYEE_NAME, e.SURNAME as EMPLOYEE_SURNAME, " +
-                "a.NAME as ACCOUNTANT_NAME, a.SURNAME as ACCOUNTANT_SURNAME " +
-                "FROM " + PAYROLL_TABLE + " p " +
-                "LEFT JOIN " + USER_TABLE + " e ON p.EMPLOYEE_ID = e.ID " +
-                "LEFT JOIN " + USER_TABLE + " a ON p.ACCOUNTANT_ID = a.ID " +
-                "WHERE p.ACCOUNTANT_ID = ?";
-        return queryList(sql, accountantId);
+                "WHERE p.IS_PAID = FALSE";
+        return queryList(sql);
     }
 
     public List<Payroll> findByPeriod(Date periodStart, Date periodEnd) {
@@ -97,15 +86,14 @@ public class PayrollDao extends Dao<Payroll> {
 
             String sql = "INSERT INTO " + PAYROLL_TABLE +
                     " (EMPLOYEE_ID, ACCOUNTANT_ID, HOURS_WORKED, HOURLY_RATE, " +
-                    "TOTAL_AMOUNT, PERIOD_START, PERIOD_END, PAYMENT_DATE, " +
+                    " PERIOD_START, PERIOD_END, PAYMENT_DATE, " +
                     "IS_PAID, CREATED_AT, UPDATED_AT) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             Long id = insert(sql,
                     payroll.getEmployee().getId(),
                     payroll.getAccountant().getId(),
                     payroll.getHoursWorked(),
                     payroll.getHourlyRate(),
-                    payroll.getTotalAmount(),
                     payroll.getPeriodStart(),
                     payroll.getPeriodEnd(),
                     payroll.getPaymentDate(),
@@ -127,7 +115,7 @@ public class PayrollDao extends Dao<Payroll> {
 
         String sql = "UPDATE " + PAYROLL_TABLE +
                 " SET EMPLOYEE_ID = ?, ACCOUNTANT_ID = ?, HOURS_WORKED = ?, " +
-                "HOURLY_RATE = ?, TOTAL_AMOUNT = ?, PERIOD_START = ?, " +
+                "HOURLY_RATE = ?, PERIOD_START = ?, " +
                 "PERIOD_END = ?, PAYMENT_DATE = ?, IS_PAID = ?, " +
                 "UPDATED_AT = ? WHERE ID = ?";
         return update(sql,
@@ -135,7 +123,6 @@ public class PayrollDao extends Dao<Payroll> {
                 payroll.getAccountant().getId(),
                 payroll.getHoursWorked(),
                 payroll.getHourlyRate(),
-                payroll.getTotalAmount(),
                 payroll.getPeriodStart(),
                 payroll.getPeriodEnd(),
                 payroll.getPaymentDate(),

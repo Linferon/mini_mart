@@ -47,28 +47,6 @@ public class PurchaseDao extends Dao<Purchase> {
         return queryList(sql);
     }
 
-    public List<Purchase> findByProduct(Long productId) {
-        String sql = "SELECT pur.*, " +
-                "p.NAME as PRODUCT_NAME, " +
-                "u.NAME as STOCK_KEEPER_NAME, u.SURNAME as STOCK_KEEPER_SURNAME " +
-                "FROM " + PURCHASE_TABLE + " pur " +
-                "LEFT JOIN " + PRODUCT_TABLE + " p ON pur.PRODUCT_ID = p.ID " +
-                "LEFT JOIN " + USER_TABLE + " u ON pur.STOCK_KEEPER_ID = u.ID " +
-                "WHERE pur.PRODUCT_ID = ?";
-        return queryList(sql, productId);
-    }
-
-    public List<Purchase> findByStockKeeper(Long stockKeeperId) {
-        String sql = "SELECT pur.*, " +
-                "p.NAME as PRODUCT_NAME, " +
-                "u.NAME as STOCK_KEEPER_NAME, u.SURNAME as STOCK_KEEPER_SURNAME " +
-                "FROM " + PURCHASE_TABLE + " pur " +
-                "LEFT JOIN " + PRODUCT_TABLE + " p ON pur.PRODUCT_ID = p.ID " +
-                "LEFT JOIN " + USER_TABLE + " u ON pur.STOCK_KEEPER_ID = u.ID " +
-                "WHERE pur.STOCK_KEEPER_ID = ?";
-        return queryList(sql, stockKeeperId);
-    }
-
     public List<Purchase> findByDateRange(Timestamp startDate, Timestamp endDate) {
         String sql = "SELECT pur.*, " +
                 "p.NAME as PRODUCT_NAME, " +

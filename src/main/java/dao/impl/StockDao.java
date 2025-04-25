@@ -6,6 +6,7 @@ import dao.mapper.StockMapper;
 
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -32,7 +33,7 @@ public class StockDao extends Dao<Stock> {
     }
 
     @Override
-    public java.util.List<Stock> findAll() {
+    public List<Stock> findAll() {
         String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
                 "FROM " + STOCK_TABLE + " s " +
                 "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID";

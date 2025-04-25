@@ -5,7 +5,6 @@ import model.Role;
 import dao.mapper.RoleMapper;
 
 import java.sql.ResultSet;
-import java.util.Optional;
 import java.util.function.Function;
 
 import static dao.DbConstants.ROLE_TABLE;
@@ -19,10 +18,5 @@ public class RoleDao extends Dao<Role> {
     @Override
     protected Function<ResultSet, Role> getMapper() {
         return RoleMapper::mapRow;
-    }
-
-    public Optional<Role> findByName(String name) {
-        String sql = "SELECT * FROM " + ROLE_TABLE + " WHERE NAME = ?";
-        return querySingle(sql, name);
     }
 }

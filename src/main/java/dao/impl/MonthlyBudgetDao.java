@@ -41,14 +41,6 @@ public class MonthlyBudgetDao extends Dao<MonthlyBudget> {
         return queryList(sql);
     }
 
-    public List<MonthlyBudget> findByDirector(Long directorId) {
-        String sql = "SELECT mb.*, u.NAME as DIRECTOR_NAME, u.SURNAME as DIRECTOR_SURNAME " +
-                "FROM " + MONTHLY_BUDGET_TABLE + " mb " +
-                "LEFT JOIN " + USER_TABLE + " u ON mb.DIRECTOR_ID = u.ID " +
-                "WHERE mb.DIRECTOR_ID = ?";
-        return queryList(sql, directorId);
-    }
-
     public List<MonthlyBudget> findByDateRange(Date startDate, Date endDate) {
         String sql = "SELECT mb.*, u.NAME as DIRECTOR_NAME, u.SURNAME as DIRECTOR_SURNAME " +
                 "FROM " + MONTHLY_BUDGET_TABLE + " mb " +
@@ -71,16 +63,15 @@ public class MonthlyBudgetDao extends Dao<MonthlyBudget> {
 
             String sql = "INSERT INTO " + MONTHLY_BUDGET_TABLE +
                     " (BUDGET_DATE, PLANNED_INCOME, PLANNED_EXPENSES, " +
-                    "ACTUAL_INCOME, ACTUAL_EXPENSES, NET_RESULT, " +
+                    "ACTUAL_INCOME, ACTUAL_EXPENSES, " +
                     "CREATED_AT, UPDATED_AT, DIRECTOR_ID) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             Long id = insert(sql,
-                    budget.getBudgetDate(),
+                    Date.valueOf(budget.getBudgetDate()),
                     budget.getPlannedIncome(),
                     budget.getPlannedExpenses(),
                     budget.getActualIncome(),
                     budget.getActualExpenses(),
-                    budget.getNetResult(),
                     budget.getCreatedAt() != null ? budget.getCreatedAt() : now,
                     budget.getUpdatedAt() != null ? budget.getUpdatedAt() : now,
                     budget.getDirector().getId());
@@ -99,7 +90,7 @@ public class MonthlyBudgetDao extends Dao<MonthlyBudget> {
 
         String sql = "UPDATE " + MONTHLY_BUDGET_TABLE +
                 " SET BUDGET_DATE = ?, PLANNED_INCOME = ?, PLANNED_EXPENSES = ?, " +
-                "ACTUAL_INCOME = ?, ACTUAL_EXPENSES = ?, NET_RESULT = ?, " +
+                "ACTUAL_INCOME = ?, ACTUAL_EXPENSES = ?, " +
                 "UPDATED_AT = ?, DIRECTOR_ID = ? WHERE ID = ?";
         return update(sql,
                 budget.getBudgetDate(),
@@ -107,7 +98,6 @@ public class MonthlyBudgetDao extends Dao<MonthlyBudget> {
                 budget.getPlannedExpenses(),
                 budget.getActualIncome(),
                 budget.getActualExpenses(),
-                budget.getNetResult(),
                 now,
                 budget.getDirector().getId(),
                 budget.getId());
