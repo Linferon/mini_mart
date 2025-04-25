@@ -38,6 +38,7 @@ public class LoggerUtil {
     }
 
     public static void warn(String message) {
+        ConsoleUtil.print(message);
         LOGGER.warning(message);
     }
 

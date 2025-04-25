@@ -13,7 +13,6 @@ public class Stock implements FormattableEntity {
 
     private static final int PRODUCT_ID_WIDTH = 5;
     private static final int PRODUCT_WIDTH = 30;
-    private static final int CATEGORY_WIDTH = 20;
     private static final int QUANTITY_WIDTH = 10;
     private static final int UPDATED_WIDTH = 20;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -29,7 +28,6 @@ public class Stock implements FormattableEntity {
     public String toString() {
         return "Остаток на складе {" +
                 "\nпродукт: " + (product != null ? product.getName() : "не указан") +
-                "\nкатегория: " + (product != null && product.getCategory() != null ? product.getCategory().getName() : "не указана") +
                 "\nколичество: " + quantity +
                 "\nпоследнее обновление: " + (updatedAt != null ? updatedAt.toLocalDateTime().format(DATE_FORMATTER) : "не указано");
     }
@@ -38,7 +36,6 @@ public class Stock implements FormattableEntity {
     public String getTableHeader() {
         return TableFormatter.formatCell("ID", PRODUCT_ID_WIDTH) +
                 TableFormatter.formatCell("Продукт", PRODUCT_WIDTH) +
-                TableFormatter.formatCell("Категория", CATEGORY_WIDTH) +
                 TableFormatter.formatCell("Количество", QUANTITY_WIDTH) +
                 TableFormatter.formatCell("Обновлено", UPDATED_WIDTH);
     }
@@ -47,14 +44,13 @@ public class Stock implements FormattableEntity {
     public String toTableRow() {
         return TableFormatter.formatCell(product != null ? product.getId() : "-", PRODUCT_ID_WIDTH) +
                 TableFormatter.formatCell(product != null ? product.getName() : "-", PRODUCT_WIDTH) +
-                TableFormatter.formatCell(product != null && product.getCategory() != null ? product.getCategory().getName() : "-", CATEGORY_WIDTH) +
                 TableFormatter.formatCell(quantity, QUANTITY_WIDTH) +
                 TableFormatter.formatCell(getFormattedUpdatedAt(), UPDATED_WIDTH);
     }
 
     @Override
     public String getTableDivider() {
-        return TableFormatter.createDivider(PRODUCT_ID_WIDTH, PRODUCT_WIDTH, CATEGORY_WIDTH, QUANTITY_WIDTH, UPDATED_WIDTH);
+        return TableFormatter.createDivider(PRODUCT_ID_WIDTH, PRODUCT_WIDTH, QUANTITY_WIDTH, UPDATED_WIDTH);
     }
 
     public String getFormattedUpdatedAt() {
