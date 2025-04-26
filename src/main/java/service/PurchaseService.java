@@ -1,18 +1,11 @@
-package service.impl;
+package service;
 
 import dao.impl.PurchaseDao;
-import exception.AuthenticationException;
-import exception.AuthorizationException;
 import exception.nsee.PurchaseNotFoundException;
 import exception.StockUpdateException;
 import model.Product;
 import model.Purchase;
 import model.Stock;
-import model.User;
-import service.interfaces.ProductService;
-import service.interfaces.PurchaseService;
-import service.interfaces.StockService;
-import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;
@@ -21,51 +14,34 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class PurchaseServiceImpl implements PurchaseService {
+public class PurchaseService {
+    private static PurchaseService instance;
     private final PurchaseDao purchaseDao = new PurchaseDao();
-    private final ProductService productService = new ProductServiceImpl();
-    private final StockService stockService = new StockServiceImpl();
-    private final UserService userService = new UserServiceImpl();
+    private final ProductService productService = ProductService.getInstance();
+    private final StockService stockService = StockService.getInstance();
+    private final UserService userService = UserService.getInstance();
+    private final ExpenseService expenseService = ExpenseService.getInstance();
+    
+    private PurchaseService() {}
 
-    private static final String ROLE_STOCK_KEEPER = "Кладовщик";
-    private static final String ROLE_ACCOUNTANT = "Бухгалтер";
-    private static final String ROLE_DIRECTOR = "Директор";
-
-
-    @Override
+    public static synchronized PurchaseService getInstance() {
+        if (instance == null) {
+            instance = new PurchaseService();
+        }
+        return instance;
+    }
+    
     public List<Purchase> getAllPurchases() {
-        checkAuthentication();
         return findAndValidate(purchaseDao::findAll, "Закупки не найдены");
     }
 
-    @Override
+    
     public Purchase getPurchaseById(Long id) {
-        checkAuthentication();
         return purchaseDao.findById(id)
                 .orElseThrow(() -> new PurchaseNotFoundException("Закупка с ID " + id + " не найдена"));
     }
-
-    @Override
-    public List<Purchase> getPurchasesByProduct(Long productId) {
-        checkAuthentication();
-        productService.getProductById(productId);
-
-        return findAndValidate(() -> purchaseDao.findByProduct(productId),
-                "Закупки для продукта с ID " + productId + " не найдены");
-    }
-
-    @Override
-    public List<Purchase> getPurchasesByStockKeeper(Long stockKeeperId) {
-        checkAuthentication();
-        userService.getUserById(stockKeeperId);
-
-        return findAndValidate(() -> purchaseDao.findByStockKeeper(stockKeeperId),
-                "Закупки, выполненные кладовщиком с ID " + stockKeeperId + " не найдены");
-    }
-
-    @Override
+    
     public List<Purchase> getPurchasesByDateRange(Timestamp startDate, Timestamp endDate) {
-        checkAuthentication();
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
         }
@@ -78,9 +54,7 @@ public class PurchaseServiceImpl implements PurchaseService {
                 "Закупки за период с " + startDate + " по " + endDate + " не найдены");
     }
 
-    @Override
-    public Long addPurchase(Purchase purchase) {
-        checkStockKeeperPermission();
+    public void addPurchase(Purchase purchase) {
         validatePurchase(purchase);
 
         if (purchase.getPurchaseDate() == null) {
@@ -101,13 +75,16 @@ public class PurchaseServiceImpl implements PurchaseService {
                     ", количество: " + purchase.getQuantity());
         }
 
-        return purchaseId;
+        try {
+            expenseService.addPurchaseExpense(purchase.getTotalCost());
+            LoggerUtil.info("Автоматически добавлен расход для закупки ID " + purchaseId);
+        } catch (Exception e) {
+            LoggerUtil.error("Не удалось добавить расход для закупки ID " + purchaseId + ": " + e.getMessage(), e);
+        }
     }
 
-    @Override
-    public Long addPurchase(Long productId, Integer quantity, BigDecimal totalCost) {
-        checkStockKeeperPermission();
-
+    
+    public void addPurchase(Long productId, Integer quantity, BigDecimal totalCost) {
         if (productId == null) {
             throw new IllegalArgumentException("ID продукта должен быть указан");
         }
@@ -121,55 +98,49 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
 
         Product product = productService.getProductById(productId);
-        User stockKeeper = userService.getCurrentUser();
 
         Purchase purchase = new Purchase(
-                null,
                 product,
                 quantity,
-                stockKeeper,
-                Timestamp.from(Instant.now()),
                 totalCost
         );
 
-        return addPurchase(purchase);
+        addPurchase(purchase);
     }
+    
+    public void updatePurchase(Long purchaseId, Integer quantity) {
+        Purchase existingPurchase = getPurchaseById(purchaseId);
 
-    @Override
-    public boolean updatePurchase(Purchase purchase) {
-        checkStockKeeperPermission();
+        BigDecimal newTotalCost = existingPurchase.getProduct().getBuyPrice().multiply(new BigDecimal(quantity));
 
-        if (purchase.getId() == null) {
-            throw new IllegalArgumentException("ID закупки не может быть пустым при обновлении");
-        }
+        Purchase updatePurchase = new Purchase(
+                purchaseId,
+                existingPurchase.getProduct(),
+                quantity,
+                existingPurchase.getStockKeeper(),
+                existingPurchase.getPurchaseDate(),
+                newTotalCost
+        );
 
-        validatePurchase(purchase);
 
-        Purchase existingPurchase = getPurchaseById(purchase.getId());
-
-        boolean updated = purchaseDao.update(purchase);
+        validatePurchase(updatePurchase);
+        boolean updated = purchaseDao.update(updatePurchase);
 
         if (updated) {
-            if (!existingPurchase.getQuantity().equals(purchase.getQuantity())) {
-                int quantityDifference = purchase.getQuantity() - existingPurchase.getQuantity();
-
-                updateStockAfterPurchaseUpdate(purchase.getProduct().getId(), quantityDifference);
+            if (!existingPurchase.getQuantity().equals(updatePurchase.getQuantity())) {
+                int quantityDifference = updatePurchase.getQuantity() - existingPurchase.getQuantity();
+                updateStockAfterPurchaseUpdate(updatePurchase.getProduct().getId(), quantityDifference);
             }
 
-            LoggerUtil.info("Обновлена закупка с ID " + purchase.getId());
+            expenseService.updatePurchaseExpense(existingPurchase.getTotalCost(), updatePurchase.getTotalCost(),  existingPurchase.getPurchaseDate());
+            LoggerUtil.info("Обновлена закупка с ID " + existingPurchase.getId());
         } else {
-            LoggerUtil.warn("Не удалось обновить закупку с ID " + purchase.getId());
+            LoggerUtil.warn("Не удалось обновить закупку с ID " + existingPurchase.getId());
         }
 
-        return updated;
     }
 
-    @Override
-    public boolean deletePurchase(Long id) {
-        if (!userService.hasRole(ROLE_ACCOUNTANT, ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только директор или бухгалтер может удалять закупки");
-        }
-
+    public void deletePurchase(Long id) {
         Purchase purchase = getPurchaseById(id);
 
         boolean deleted = purchaseDao.deleteById(id);
@@ -177,43 +148,11 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (deleted) {
             updateStockAfterPurchaseDeletion(purchase.getProduct().getId(), purchase.getQuantity());
             LoggerUtil.info("Удалена закупка с ID " + id);
+            expenseService.deletePurchaseExpense(purchase.getTotalCost(), purchase.getPurchaseDate());
         } else {
             LoggerUtil.warn("Не удалось удалить закупку с ID " + id);
         }
-
-        return deleted;
     }
-
-    @Override
-    public BigDecimal getTotalPurchaseCost(Timestamp startDate, Timestamp endDate) {
-        checkAuthentication();
-
-        List<Purchase> purchases = getPurchasesByDateRange(startDate, endDate);
-
-        return purchases.stream()
-                .map(Purchase::getTotalCost)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    @Override
-    public int getTotalPurchasedQuantity(Long productId, Timestamp startDate, Timestamp endDate) {
-        checkAuthentication();
-
-        productService.getProductById(productId);
-
-        List<Purchase> purchases;
-        try {
-            purchases = purchaseDao.findByDateRange(startDate, endDate);
-        } catch (PurchaseNotFoundException e) {
-            return 0;
-        }
-
-        return purchases.stream()
-                .filter(p -> p.getProduct().getId().equals(productId))
-                .mapToInt(Purchase::getQuantity)
-                .sum();
-    }
-
 
     private void validatePurchase(Purchase purchase) {
         if (purchase.getProduct() == null || purchase.getProduct().getId() == null) {
@@ -242,12 +181,11 @@ public class PurchaseServiceImpl implements PurchaseService {
             stockService.updateStockQuantity(productId, newQuantity);
 
             LoggerUtil.info("Обновлено количество товара с ID " + productId + " на складе: " + newQuantity);
+
         } catch (Exception e) {
             Stock newStock = new Stock(
                     productService.getProductById(productId),
-                    quantity,
-                    Timestamp.from(Instant.now()),
-                    Timestamp.from(Instant.now())
+                    quantity
             );
 
             stockService.addStock(newStock);
@@ -305,19 +243,5 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
 
         return purchases;
-    }
-
-    private void checkAuthentication() {
-        if (!userService.isAuthenticated()) {
-            throw new AuthenticationException("Пользователь не авторизован");
-        }
-    }
-
-    private void checkStockKeeperPermission() {
-        checkAuthentication();
-
-        if (!userService.hasRole(ROLE_STOCK_KEEPER, ROLE_ACCOUNTANT, ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только кладовщик, бухгалтер или директор могут управлять закупками");
-        }
     }
 }

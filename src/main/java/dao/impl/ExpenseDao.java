@@ -4,6 +4,7 @@ import dao.Dao;
 import model.Expense;
 import dao.mapper.ExpenseMapper;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -34,6 +35,17 @@ public class ExpenseDao extends Dao<Expense> {
                 "LEFT JOIN " + USER_TABLE + " u ON e.ACCOUNTANT_ID = u.ID " +
                 "WHERE e.ID = ?";
         return querySingle(sql, id);
+    }
+
+    public Optional<Expense> findByTotalAmountAndDate(BigDecimal totalAmount, Timestamp date) {
+        String sql = "SELECT e.*, " +
+                "c.NAME as CATEGORY_NAME, " +
+                "u.NAME as ACCOUNTANT_NAME, u.SURNAME as ACCOUNTANT_SURNAME " +
+                "FROM " + EXPENSE_TABLE + " e " +
+                "LEFT JOIN " + EXPENSE_CATEGORY_TABLE + " c ON e.CATEGORY_ID = c.ID " +
+                "LEFT JOIN " + USER_TABLE + " u ON e.ACCOUNTANT_ID = u.ID " +
+                "WHERE e.TOTAL_AMOUNT = ? AND e.EXPENSE_DATE = ?";
+        return querySingle(sql, totalAmount, date);
     }
 
     @Override
