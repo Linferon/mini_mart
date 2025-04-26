@@ -1,13 +1,8 @@
-package service.impl;
+package service;
 
 import dao.impl.ProductDao;
-import exception.AuthenticationException;
-import exception.AuthorizationException;
 import exception.nsee.ProductNotFoundException;
 import model.Product;
-import service.interfaces.ProductCategoryService;
-import service.interfaces.ProductService;
-import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;
@@ -16,45 +11,31 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class ProductServiceImpl implements ProductService {
+public class ProductService {
+    private static ProductService instance;
     private final ProductDao productDao = new ProductDao();
-    private final ProductCategoryService productCategoryService = new ProductCategoryServiceImpl();
-    private final UserService userService = new UserServiceImpl();
+    private final ProductCategoryService productCategoryService = ProductCategoryService.getInstance();
 
-    private static final String ROLE_STOCK_KEEPER = "Кладовщик";
+    private ProductService() {}
 
-    @Override
-    public List<Product> getAllProducts() {
-        checkStockKeeperPermission();
-        return findAndValidate(productDao::findAll, "Продукты не были найдены!");
+    public static synchronized ProductService getInstance() {
+        if (instance == null) {
+            instance = new ProductService();
+        }
+        return instance;
     }
 
-    @Override
+    public List<Product> getAllProducts() {
+        return findAndValidate(productDao::findAll);
+    }
+
+    
     public Product getProductById(Long id) {
-        checkStockKeeperPermission();
         return productDao.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Продукт с ID " + id + " не найден"));
     }
 
-    @Override
-    public List<Product> getProductsByCategory(Long categoryId) {
-        checkStockKeeperPermission();
-        productCategoryService.getCategoryById(categoryId);
-        return findAndValidate(() -> productDao.findByCategory(categoryId),
-                "Продукты с ID категории " + categoryId + " не были найдены!");
-    }
-
-    @Override
-    public List<Product> getProductsByName(String name) {
-        checkStockKeeperPermission();
-        return findAndValidate(() -> productDao.findByName(name),
-                "Продукты с именем " + name + " не были найдены!");
-    }
-
-    @Override
-    public Long addProduct(Product product) {
-        checkStockKeeperPermission();
-
+    public void addProduct(Product product) {
         validateProduct(product);
         productCategoryService.getCategoryById(product.getCategory().getId());
 
@@ -68,35 +49,26 @@ public class ProductServiceImpl implements ProductService {
 
         Long id = productDao.save(product);
         LoggerUtil.info("Добавлен новый продукт с ID " + id + ": " + product.getName());
-        return id;
     }
 
-    @Override
-    public boolean updateProduct(Product product) {
-        checkStockKeeperPermission();
-
+    public void updateProduct(Product product) {
         validateProduct(product);
 
         getProductById(product.getId());
-
         productCategoryService.getCategoryById(product.getCategory().getId());
 
-        product.setUpdatedAt(Timestamp.from(Instant.now()));
+        Timestamp now = Timestamp.from(Instant.now());
+        product.setUpdatedAt(now);
 
         boolean updated = productDao.update(product);
-
         if (updated) {
             LoggerUtil.info("Обновлен продукт с ID " + product.getId() + ": " + product.getName());
         } else {
             LoggerUtil.warn("Не удалось обновить продукт с ID " + product.getId());
         }
-        return updated;
     }
-
-    @Override
-    public boolean deleteProduct(Long id) {
-        checkStockKeeperPermission();
-
+    
+    public void deleteProduct(Long id) {
         getProductById(id);
         boolean deleted = productDao.deleteById(id);
 
@@ -105,7 +77,6 @@ public class ProductServiceImpl implements ProductService {
         } else {
             LoggerUtil.warn("Не удалось удалить продукт с ID " + id);
         }
-        return deleted;
     }
 
     private void validateProduct(Product product) {
@@ -126,22 +97,12 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private void checkStockKeeperPermission() {
-        if (!userService.isAuthenticated()) {
-            throw new AuthenticationException("Пользователь не авторизован");
-        }
-
-        if (!userService.hasRole(ROLE_STOCK_KEEPER)) {
-            throw new AuthorizationException("Только кладовщик может управлять продуктами");
-        }
-    }
-
-    private List<Product> findAndValidate(Supplier<List<Product>> supplier, String errorMessage) {
+    private List<Product> findAndValidate(Supplier<List<Product>> supplier) {
         List<Product> products = supplier.get();
 
         if (products.isEmpty()) {
-            LoggerUtil.warn(errorMessage);
-            throw new ProductNotFoundException(errorMessage);
+            LoggerUtil.warn("Продукты не были найдены!");
+            throw new ProductNotFoundException("Продукты не были найдены!");
         }
 
         LoggerUtil.info("Получено категорий: " + products.size());
