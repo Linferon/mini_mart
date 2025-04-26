@@ -40,6 +40,30 @@ public class StockDao extends Dao<Stock> {
         return queryList(sql);
     }
 
+    public List<Stock> findAvailableProducts() {
+        String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
+                "FROM " + STOCK_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID " +
+                "WHERE s.QUANTITY > 0";
+        return queryList(sql);
+    }
+
+    public List<Stock> findOutOfStockProducts(){
+        String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
+                "FROM " + STOCK_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID " +
+                "WHERE s.QUANTITY <= 0";
+        return queryList(sql);
+    }
+
+    public List<Stock> findLowStockProducts(int threshold) {
+        String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
+                "FROM " + STOCK_TABLE + " s " +
+                "LEFT JOIN " + PRODUCT_TABLE + " p ON s.PRODUCT_ID = p.ID " +
+                "WHERE s.QUANTITY BETWEEN 0 AND " + threshold;
+        return queryList(sql);
+    }
+
     public Optional<Stock> findByProductId(Long productId) {
         String sql = "SELECT s.*, p.NAME as PRODUCT_NAME " +
                 "FROM " + STOCK_TABLE + " s " +
