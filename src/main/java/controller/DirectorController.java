@@ -62,7 +62,7 @@ public class DirectorController extends BaseController {
 
             String action = Boolean.TRUE.equals(user.getEnabled()) ? "восстановлен" : "уволен";
             showSuccess("Сотрудник успешно " + action + ".");
-        }, "Ошибка при изменении статуса сотрудника");
+        });
     }
 
     private void showAllEmployees() {
@@ -77,7 +77,7 @@ public class DirectorController extends BaseController {
             roleStats.forEach((role, count) ->
                     ConsoleUtil.println(role + ": " + count + " чел.")
             );
-        }, "Ошибка при просмотре сотрудников");
+        });
     }
 
     private void setBudget() {
@@ -118,7 +118,7 @@ public class DirectorController extends BaseController {
             if (netResult.compareTo(BigDecimal.ZERO) < 0) {
                 ConsoleUtil.println("Внимание: прогнозируется убыток!");
             }
-        }, "Ошибка при установке бюджета");
+        });
     }
 
 
@@ -139,7 +139,7 @@ public class DirectorController extends BaseController {
             User newUser = new User(null, name, surname, email, password, true, selectedRole, null, null);
             userService.registerUser(newUser);
             showSuccess("Сотрудник успешно зарегистрирован.");
-        }, "Ошибка при регистрации сотрудника");
+        });
     }
 
     private void updateEmployee() {
@@ -152,9 +152,9 @@ public class DirectorController extends BaseController {
             ConsoleUtil.println(existingUser.toString());
             ConsoleUtil.printDivider();
 
-            inputIfPresent("Введите новое имя", existingUser::setName);
-            inputIfPresent("Введите новую фамилию", existingUser::setSurname);
-            inputIfPresent("Введите новый email", existingUser::setEmail);
+            InputHandler.inputIfPresent("Введите новое имя", existingUser::setName);
+            InputHandler.inputIfPresent("Введите новую фамилию", existingUser::setSurname);
+            InputHandler.inputIfPresent("Введите новый email", existingUser::setEmail);
 
             if (!userService.getCurrentUser().equals(existingUser)) {
                 String changeRole = InputHandler.getStringInput("Хотите изменить роль? (да/любое слово): ");
@@ -171,18 +171,10 @@ public class DirectorController extends BaseController {
 
             userService.updateUser(existingUser);
             showSuccess("Данные сотрудника обновлены.");
-        }, "Ошибка при обновлении сотрудника");
+        });
     }
 
     private void showStatistics() {
-        createMenu("Статистика")
-                .addMenuItem("Статистика бюджета", this::showBudgetStatistics)
-                .addMenuItem("Статистика зарплат", this::showPayrollStatistics)
-                .addExitItem("Назад")
-                .show();
-    }
-
-    private void showBudgetStatistics() {
         ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
             List<MonthlyBudget> budgets = budgetService.getBudgetsByDateRange(startDate, endDate);
 
@@ -191,23 +183,23 @@ public class DirectorController extends BaseController {
 
             ConsoleUtil.printHeader("Сводка");
             printBudgetSummary(startDate, endDate);
-        }), "Ошибка при получении статистики ");
+            printPayrollsSummary(startDate, endDate);
+        }));
     }
 
-    private void showPayrollStatistics() {
-        ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
-            List<Payroll> payrolls = payrollService.getPayrollsByPeriod(startDate, endDate);
+    private void printPayrollsSummary(LocalDate start, LocalDate end){
+        List<Payroll> payrolls = payrollService.getPayrollsByPeriod(start, end);
 
-            long totalPayrolls = payrolls.size();
-            long paidPayrolls = payrolls.stream().filter(Payroll::isPaid).count();
-            long unpaidPayrolls = totalPayrolls - paidPayrolls;
+        long totalPayrolls = payrolls.size();
+        long paidPayrolls = payrolls.stream().filter(Payroll::isPaid).count();
+        long unpaidPayrolls = totalPayrolls - paidPayrolls;
 
-            ConsoleUtil.printHeader("Статистика зарплат за период " + startDate + " - " + endDate);
-            ConsoleUtil.println("Всего начислений: " + totalPayrolls);
-            ConsoleUtil.println("Выплачено: " + paidPayrolls + " (" + (paidPayrolls * 100 / totalPayrolls) + "%)");
-            ConsoleUtil.println("Не выплачено: " + unpaidPayrolls + " (" + (unpaidPayrolls * 100 / totalPayrolls) + "%)");
-        }), "Ошибка при установке бюджета");
+        ConsoleUtil.printHeader("Статистика зарплат за период " + start + " - " + end);
+        ConsoleUtil.println("Всего начислений: " + totalPayrolls);
+        ConsoleUtil.println("Выплачено: " + paidPayrolls + " (" + (paidPayrolls * 100 / totalPayrolls) + "%)");
+        ConsoleUtil.println("Не выплачено: " + unpaidPayrolls + " (" + (unpaidPayrolls * 100 / totalPayrolls) + "%)");
     }
+
 
     private void printBudgetSummary(LocalDate start, LocalDate end) {
         BigDecimal plannedIncome = budgetService.getTotalPlannedIncome(start, end);
@@ -219,15 +211,10 @@ public class DirectorController extends BaseController {
         BigDecimal actualProfit = actualIncome.subtract(actualExpenses);
 
         ConsoleUtil.println("Плановый доход: " + plannedIncome);
-        ConsoleUtil.println("Фактический доход: " + actualIncome);
         ConsoleUtil.println("Плановые расходы: " + plannedExpenses);
+        ConsoleUtil.println("Фактический доход: " + actualIncome);
         ConsoleUtil.println("Фактические расходы: " + actualExpenses);
         ConsoleUtil.println("Плановая прибыль: " + plannedProfit);
         ConsoleUtil.println("Фактическая прибыль: " + actualProfit);
-    }
-
-    private void inputIfPresent(String prompt, java.util.function.Consumer<String> setter) {
-        String input = InputHandler.getStringInput(prompt + " (Enter для пропуска): ");
-        if (!input.isEmpty()) setter.accept(input);
     }
 }

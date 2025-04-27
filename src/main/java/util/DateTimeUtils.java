@@ -29,4 +29,8 @@ public class DateTimeUtils {
     public static Timestamp now() {
         return Timestamp.valueOf(LocalDateTime.now());
     }
+
+    public static LocalDate getLocalDateFromTimestamp(Timestamp timestamp) {
+        return timestamp.toLocalDateTime().toLocalDate();
+    }
 }

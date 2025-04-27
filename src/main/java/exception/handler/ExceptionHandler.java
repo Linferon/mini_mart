@@ -5,11 +5,11 @@ import util.ConsoleUtil;
 public class ExceptionHandler {
     private ExceptionHandler() {}
 
-    public static void execute(Runnable action, String errorMessage) {
+    public static void execute(Runnable action) {
         try {
             action.run();
         } catch (Exception e) {
-            ConsoleUtil.println(errorMessage + ": " + e.getMessage());
+            ConsoleUtil.println(e.getMessage());
         }
     }
 }

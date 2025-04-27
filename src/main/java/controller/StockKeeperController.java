@@ -53,7 +53,7 @@ public class StockKeeperController extends BaseController {
             Product product = new Product(null, name, category, buyPrice, sellPrice);
             productService.addProduct(product);
             showSuccess("Продукт успешно добавлен.");
-        }, "Ошибка при добавлении продукта");
+        });
     }
 
     private void viewProducts() {
@@ -62,7 +62,7 @@ public class StockKeeperController extends BaseController {
 
             ConsoleUtil.printHeader("Список продуктов");
             ConsoleUtil.println(TableFormatter.formatTable(products));
-        }, "Ошибка при просмотре продуктов");
+        });
     }
 
     private void updateProduct() {
@@ -78,7 +78,7 @@ public class StockKeeperController extends BaseController {
             updateProductFields(product);
             productService.updateProduct(product);
             showSuccess("Продукт успешно обновлен.");
-        }, "Ошибка при обновлении продукта");
+        });
     }
 
     private void updateProductFields(Product product) {
@@ -119,7 +119,7 @@ public class StockKeeperController extends BaseController {
                 productService.deleteProduct(productId);
                 showSuccess("Продукт успешно удален.");
             });
-        }, "Ошибка при удалении продукта");
+        });
     }
 
     private void manageStock() {
@@ -153,8 +153,7 @@ public class StockKeeperController extends BaseController {
                 stockService.addStock(stock);
                 showSuccess("Продукт добавлен на склад вручную.");
             }
-
-        }, "Ошибка при ручном добавлении товара на склад");
+        });
     }
 
 
@@ -166,7 +165,7 @@ public class StockKeeperController extends BaseController {
             ConsoleUtil.printHeader("Остатки на складе");
             ConsoleUtil.println(TableFormatter.formatTable(stocks));
 
-        }, "Ошибка при просмотре остатков");
+        });
     }
 
     private void viewLowStock() {
@@ -176,7 +175,7 @@ public class StockKeeperController extends BaseController {
 
             ConsoleUtil.printHeader("Товары с низким остатком (меньше " + threshold + ")");
             ConsoleUtil.println(TableFormatter.formatTable(lowStocks));
-        }, "Ошибка при просмотре товаров с низким остатком");
+        });
     }
 
     private void viewOutOfStock() {
@@ -185,7 +184,7 @@ public class StockKeeperController extends BaseController {
 
             ConsoleUtil.printHeader("Товары, отсутствующие на складе");
             ConsoleUtil.println(TableFormatter.formatTable(outOfStocks));
-        }, "Ошибка при просмотре отсутствующих товаров");
+        });
     }
 
     private void updateStockQuantity() {
@@ -212,7 +211,7 @@ public class StockKeeperController extends BaseController {
 
             stockService.updateStockQuantity(productId, quantity);
             showSuccess("Количество товара успешно обновлено.");
-        }, "Ошибка при обновлении количества товара");
+        });
     }
 
     private void deleteStock() {
@@ -233,7 +232,7 @@ public class StockKeeperController extends BaseController {
                     ConsoleUtil.println("Не удалось удалить запись склада.");
                 }
             });
-        }, "Ошибка при удалении записи склада");
+        });
     }
 
 
@@ -265,7 +264,7 @@ public class StockKeeperController extends BaseController {
             showSuccess("Закупка успешно добавлена.");
 
             handlePriceUpdate(product, quantity, totalCost);
-        }, "Ошибка при добавлении закупки");
+        });
     }
 
     private void updatePurchase() {
@@ -282,7 +281,7 @@ public class StockKeeperController extends BaseController {
             purchaseService.updatePurchase(purchaseId, newQuantity);
 
             showSuccess("Закупка успешно обновлена.");
-        }, "Ошибка при обновлении закупки");
+        });
     }
 
     private void deletePurchase() {
@@ -298,7 +297,7 @@ public class StockKeeperController extends BaseController {
                 purchaseService.deletePurchase(purchaseId);
                 showSuccess("Закупка успешно удалена.");
             });
-        }, "Ошибка при удалении закупки");
+        });
     }
 
 

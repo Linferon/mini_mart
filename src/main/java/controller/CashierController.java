@@ -47,7 +47,7 @@ public class CashierController extends BaseController {
             showSuccess("Продажа успешно совершена. Сумма к оплате: " + sale.getTotalAmount() + " руб.");
 
             printCheck(sale);
-        }, "Ошибка при продаже товара");
+        });
     }
 
     private void viewSales() {
@@ -57,7 +57,7 @@ public class CashierController extends BaseController {
             ConsoleUtil.printHeader("Список продаж за период " + startDate + " - " + endDate);
             ConsoleUtil.println(TableFormatter.formatTable(sales));
 
-        }), "Ошибка при просмотре продаж товара");
+        }));
 
     }
 
@@ -71,7 +71,7 @@ public class CashierController extends BaseController {
             ConsoleUtil.println("Общее количество проданных товаров: " + totalQuantity + " шт.");
             ConsoleUtil.println("Количество продаж: " + sales.size());
 
-        }), "Ошибка при продаже товара");
+        }));
     }
 
     private void printCheck(Sale sale) {

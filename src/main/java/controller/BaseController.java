@@ -16,7 +16,7 @@ public abstract class BaseController {
         ExceptionHandler.execute(() -> {
             LocalDate[] dateRange = DateTimeUtils.getDateRange();
             action.execute(dateRange[0], dateRange[1]);
-        }, "Ошибка при работе с диапазоном дат");
+        });
     }
 
     @FunctionalInterface

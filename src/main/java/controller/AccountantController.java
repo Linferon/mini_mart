@@ -16,7 +16,7 @@ public class AccountantController extends BaseController {
     private final PayrollService payrollService;
     private final IncomeSourceService incomeSourceService;
     private final ExpenseCategoryService expenseCategoryService;
-    private final MonthlyBudgetService monthlyBudgetService;
+    private final UserService userService;
 
     public AccountantController() {
         this.incomeService = IncomeService.getInstance();
@@ -24,7 +24,7 @@ public class AccountantController extends BaseController {
         this.payrollService = PayrollService.getInstance();
         this.incomeSourceService = IncomeSourceService.getInstance();
         this.expenseCategoryService = ExpenseCategoryService.getInstance();
-        this.monthlyBudgetService = MonthlyBudgetService.getInstance();
+        userService = UserService.getInstance();
     }
 
     @Override
@@ -56,10 +56,9 @@ public class AccountantController extends BaseController {
             LocalDate incomeDate = InputHandler.getDateInput("Введите дату дохода (ГГГГ-ММ-ДД): ");
 
             incomeService.addIncome(sourceId, amount, incomeDate);
-            updateMonthlyBudget(amount, incomeDate, true);
 
             showSuccess("Доход успешно добавлен.");
-        }, "Ошибка при добавлении дохода");
+        });
     }
 
     private void viewIncomes() {
@@ -70,7 +69,7 @@ public class AccountantController extends BaseController {
 
                     BigDecimal totalIncome = incomeService.getTotalIncome(incomes);
                     ConsoleUtil.println("\nОбщая сумма доходов за период: " + totalIncome);
-                }), "Ошибка при просмотре доходов");
+                }));
     }
 
     private void editIncome() {
@@ -84,27 +83,26 @@ public class AccountantController extends BaseController {
             Income income = incomeService.getIncomeById(incomeId);
 
             showEntityDetails(income, "Редактирование дохода");
-
-            LocalDate oldIncomeDate = getLocalDateFromTimestamp(income.getIncomeDate());
-            BigDecimal oldAmount = income.getTotalAmount();
-
             showEntitiesTable(incomeSourceService.getAllIncomeSources(), "Доступные источники дохода");
 
-            Long sourceId = getUpdatedLongValue("ID источника дохода", income.getSource().id());
-            BigDecimal amount = getUpdatedBigDecimalValue("сумму дохода", income.getTotalAmount());
-            LocalDate incomeDate = getUpdatedDateValue("дату дохода", oldIncomeDate);
+            Long sourceId = InputHandler.getUpdatedLongValue("ID источника дохода", income.getSource().id());
+            IncomeSource incomeSource = incomeSourceService.getIncomeSourceById(sourceId);
 
-            income.setSource(incomeSourceService.getIncomeSourceById(sourceId));
+            BigDecimal amount = InputHandler.getUpdatedBigDecimalValue("сумму дохода", income.getTotalAmount());
+
+            LocalDate oldIncomeDate = DateTimeUtils.getLocalDateFromTimestamp(income.getIncomeDate());
+            LocalDate incomeDate = InputHandler.getUpdatedDateValue("дату дохода", oldIncomeDate);
+
+            income.setSource(incomeSource);
             income.setTotalAmount(amount);
             income.setIncomeDate(Timestamp.valueOf(incomeDate.atStartOfDay()));
 
             if (incomeService.updateIncome(income)) {
-                updateBudgetOnEdit(oldAmount, amount, oldIncomeDate, incomeDate, true);
                 showSuccess("Доход успешно обновлен.");
             } else {
                 showError("Не удалось обновить доход.");
             }
-        }, "Ошибка при редактировании дохода");
+        });
     }
 
     private void deleteIncome() {
@@ -115,18 +113,13 @@ public class AccountantController extends BaseController {
             );
 
             Long incomeId = InputHandler.getLongInput("Введите ID дохода для удаления: ");
-            Income income = incomeService.getIncomeById(incomeId);
-
-            LocalDate incomeDate = getLocalDateFromTimestamp(income.getIncomeDate());
-            BigDecimal amount = income.getTotalAmount();
 
             if (incomeService.deleteIncome(incomeId)) {
-                updateBudgetOnDelete(amount, incomeDate, true);
                 showSuccess("Доход успешно удален.");
             } else {
                 showError("Не удалось удалить доход.");
             }
-        }, "Ошибка при удалении дохода");
+        });
     }
 
     private void manageExpenses() {
@@ -148,16 +141,13 @@ public class AccountantController extends BaseController {
             LocalDate expenseDate = InputHandler.getDateInput("Введите дату расхода (ГГГГ-ММ-ДД): ");
 
             Timestamp expenseTimestamp = Timestamp.valueOf(expenseDate.atStartOfDay());
-
             ExpenseCategory category = expenseCategoryService.getExpenseCategoryById(categoryId);
-            Expense expense = new Expense(category, amount);
-            expense.setExpenseDate(expenseTimestamp);
 
+            Expense expense = new Expense(category, amount, expenseTimestamp);
             expenseService.addExpense(expense);
-            updateMonthlyBudget(amount, expenseDate, false);
 
             showSuccess("Расход успешно добавлен.");
-        }, "Ошибка при добавлении расхода");
+        });
     }
 
     private void viewExpenses() {
@@ -172,7 +162,7 @@ public class AccountantController extends BaseController {
 
                     BigDecimal totalExpense = expenseService.getTotalExpenses(expenses);
                     ConsoleUtil.println("\nОбщая сумма расходов за период: " + totalExpense);
-                }), "Ошибка при просмотре расходов");
+                }));
     }
 
     private void editExpense() {
@@ -181,29 +171,26 @@ public class AccountantController extends BaseController {
 
             Long expenseId = InputHandler.getLongInput("Введите ID расхода для редактирования: ");
             Expense expense = expenseService.getExpenseById(expenseId);
+            LocalDate oldExpenseDate = DateTimeUtils.getLocalDateFromTimestamp(expense.getExpenseDate());
 
             showEntityDetails(expense, "Редактирование расхода с ID " + expenseId);
-
-            LocalDate oldExpenseDate = getLocalDateFromTimestamp(expense.getExpenseDate());
-            BigDecimal oldAmount = expense.getTotalAmount();
-
             showEntitiesTable(expenseCategoryService.getAllExpenseCategories(), "Доступные категории расходов");
 
-            Long categoryId = getUpdatedLongValue("ID категории расхода", expense.getCategory().id());
-            BigDecimal amount = getUpdatedBigDecimalValue("сумму расхода", expense.getTotalAmount());
-            LocalDate expenseDate = getUpdatedDateValue("дату расхода", oldExpenseDate);
+            Long categoryId = InputHandler.getUpdatedLongValue("ID категории расхода", expense.getCategory().id());
+            ExpenseCategory expenseCategory = expenseCategoryService.getExpenseCategoryById(categoryId);
+            BigDecimal amount = InputHandler.getUpdatedBigDecimalValue("сумму расхода", expense.getTotalAmount());
+            LocalDate expenseDate = InputHandler.getUpdatedDateValue("дату расхода", oldExpenseDate);
 
-            expense.setCategory(expenseCategoryService.getExpenseCategoryById(categoryId));
+            expense.setCategory(expenseCategory);
             expense.setTotalAmount(amount);
             expense.setExpenseDate(Timestamp.valueOf(expenseDate.atStartOfDay()));
 
             if (expenseService.updateExpense(expense)) {
-                updateBudgetOnEdit(oldAmount, amount, oldExpenseDate, expenseDate, false);
                 showSuccess("Расход успешно обновлен.");
             } else {
                 showError("Не удалось обновить расход.");
             }
-        }, "Ошибка при редактировании расхода");
+        });
     }
 
     private void deleteExpense() {
@@ -211,16 +198,10 @@ public class AccountantController extends BaseController {
             selectExpensesForDateRange("Выберите расход для удаления");
 
             Long expenseId = InputHandler.getLongInput("Введите ID расхода для удаления: ");
-            Expense expense = expenseService.getExpenseById(expenseId);
-
-            LocalDate expenseDate = getLocalDateFromTimestamp(expense.getExpenseDate());
-            BigDecimal amount = expense.getTotalAmount();
 
             expenseService.deleteExpense(expenseId);
-            updateBudgetOnDelete(amount, expenseDate, false);
-
             showSuccess("Расход успешно удален.");
-        }, "Ошибка при удалении расхода");
+        });
     }
 
     private void managePayroll() {
@@ -234,6 +215,9 @@ public class AccountantController extends BaseController {
 
     private void addPayroll() {
         ExceptionHandler.execute(() -> {
+            List<User> users = userService.getActiveUsers();
+            ConsoleUtil.printHeader("Сотрудники");
+            ConsoleUtil.println(TableFormatter.formatTable(users));
             Long employeeId = InputHandler.getLongInput("Введите ID сотрудника: ");
             float hoursWorked = InputHandler.getFloatInput("Введите количество отработанных часов: ");
             BigDecimal hourlyRate = InputHandler.getBigDecimalInput("Введите почасовую ставку: ");
@@ -242,7 +226,7 @@ public class AccountantController extends BaseController {
 
             payrollService.createPayroll(employeeId, hoursWorked, hourlyRate, periodStart, periodEnd);
             showSuccess("Зарплата успешно начислена.");
-        }, "Ошибка при начислении зарплаты");
+        });
     }
 
     private void viewPayrolls() {
@@ -256,7 +240,7 @@ public class AccountantController extends BaseController {
                     long unpaidCount = payrolls.size() - paidCount;
 
                     ConsoleUtil.println("Выплачено: " + paidCount + " | Не выплачено: " + unpaidCount);
-                }), "Ошибка при просмотре зарплат");
+                }));
     }
 
     private void markPayrollAsPaid() {
@@ -272,100 +256,7 @@ public class AccountantController extends BaseController {
 
             payrollService.markAsPaid(payrollId, paymentDate);
             showSuccess("Зарплата отмечена как выплаченная.");
-        }, "Ошибка при отметке зарплаты как выплаченной");
-    }
-
-    private void updateMonthlyBudget(BigDecimal amount, LocalDate date, boolean isIncome) {
-        try {
-            LocalDate firstDayOfMonth = date.withDayOfMonth(1);
-            MonthlyBudget budget = monthlyBudgetService.getBudgetByDate(firstDayOfMonth);
-
-            BigDecimal newActualIncome = budget.getActualIncome();
-            BigDecimal newActualExpenses = budget.getActualExpenses();
-
-            if (isIncome) {
-                newActualIncome = newActualIncome.add(amount);
-            } else {
-                newActualExpenses = newActualExpenses.add(amount);
-            }
-
-            monthlyBudgetService.updateActualValues(budget.getId(), newActualIncome, newActualExpenses);
-
-            String budgetType = isIncome ? "доход" : "расход";
-            ConsoleUtil.println("Фактический " + budgetType + " в бюджете на " +
-                    firstDayOfMonth.getMonth() + " " + firstDayOfMonth.getYear() + " обновлен.");
-        } catch (Exception e) {
-            LoggerUtil.warn("Не удалось обновить месячный бюджет: " + e.getMessage());
-        }
-    }
-
-    private void updateBudgetOnEdit(BigDecimal oldAmount, BigDecimal newAmount,
-                                    LocalDate oldDate, LocalDate newDate, boolean isIncome) {
-        try {
-            if (!oldDate.withDayOfMonth(1).equals(newDate.withDayOfMonth(1))) {
-                LocalDate oldFirstDayOfMonth = oldDate.withDayOfMonth(1);
-                MonthlyBudget oldBudget = monthlyBudgetService.getBudgetByDate(oldFirstDayOfMonth);
-
-                if (isIncome) {
-                    BigDecimal newActualIncome = oldBudget.getActualIncome().subtract(oldAmount);
-                    if (newActualIncome.compareTo(BigDecimal.ZERO) < 0) newActualIncome = BigDecimal.ZERO;
-                    monthlyBudgetService.updateActualValues(oldBudget.getId(), newActualIncome, oldBudget.getActualExpenses());
-                } else {
-                    BigDecimal newActualExpenses = oldBudget.getActualExpenses().subtract(oldAmount);
-                    if (newActualExpenses.compareTo(BigDecimal.ZERO) < 0) newActualExpenses = BigDecimal.ZERO;
-                    monthlyBudgetService.updateActualValues(oldBudget.getId(), oldBudget.getActualIncome(), newActualExpenses);
-                }
-
-                updateMonthlyBudget(newAmount, newDate, isIncome);
-            } else {
-                BigDecimal diff = newAmount.subtract(oldAmount);
-                if (diff.compareTo(BigDecimal.ZERO) != 0) {
-                    LocalDate firstDayOfMonth = newDate.withDayOfMonth(1);
-                    MonthlyBudget budget = monthlyBudgetService.getBudgetByDate(firstDayOfMonth);
-
-                    if (isIncome) {
-                        BigDecimal newActualIncome = budget.getActualIncome().add(diff);
-                        if (newActualIncome.compareTo(BigDecimal.ZERO) < 0) newActualIncome = BigDecimal.ZERO;
-                        monthlyBudgetService.updateActualValues(budget.getId(), newActualIncome, budget.getActualExpenses());
-                    } else {
-                        BigDecimal newActualExpenses = budget.getActualExpenses().add(diff);
-                        if (newActualExpenses.compareTo(BigDecimal.ZERO) < 0) newActualExpenses = BigDecimal.ZERO;
-                        monthlyBudgetService.updateActualValues(budget.getId(), budget.getActualIncome(), newActualExpenses);
-                    }
-
-                    String budgetType = isIncome ? "доход" : "расход";
-                    ConsoleUtil.println("Фактический " + budgetType + " в бюджете на " +
-                            firstDayOfMonth.getMonth() + " " + firstDayOfMonth.getYear() + " обновлен.");
-                }
-            }
-        } catch (Exception e) {
-            LoggerUtil.warn("Не удалось корректно обновить месячные бюджеты: " + e.getMessage());
-        }
-    }
-
-    private void updateBudgetOnDelete(BigDecimal amount, LocalDate date, boolean isIncome) {
-        try {
-            LocalDate firstDayOfMonth = date.withDayOfMonth(1);
-            MonthlyBudget budget = monthlyBudgetService.getBudgetByDate(firstDayOfMonth);
-
-            if (isIncome) {
-                BigDecimal newActualIncome = budget.getActualIncome().subtract(amount);
-                if (newActualIncome.compareTo(BigDecimal.ZERO) < 0) {
-                    newActualIncome = BigDecimal.ZERO;
-                }
-                monthlyBudgetService.updateActualValues(budget.getId(), newActualIncome, budget.getActualExpenses());
-                ConsoleUtil.println("Фактический доход в бюджете обновлен.");
-            } else {
-                BigDecimal newActualExpenses = budget.getActualExpenses().subtract(amount);
-                if (newActualExpenses.compareTo(BigDecimal.ZERO) < 0) {
-                    newActualExpenses = BigDecimal.ZERO;
-                }
-                monthlyBudgetService.updateActualValues(budget.getId(), budget.getActualIncome(), newActualExpenses);
-                ConsoleUtil.println("Фактические расходы в бюджете обновлены.");
-            }
-        } catch (Exception e) {
-            LoggerUtil.warn("Не удалось обновить месячный бюджет: " + e.getMessage());
-        }
+        });
     }
 
     private <T extends FormattableEntity> void showEntitiesTable(List<T> entities, String title) {
@@ -376,25 +267,6 @@ public class AccountantController extends BaseController {
     private void showEntityDetails(Object entity, String title) {
         ConsoleUtil.printHeader(title);
         ConsoleUtil.println(entity.toString());
-    }
-
-    private Long getUpdatedLongValue(String fieldName, Long currentValue) {
-        long value = InputHandler.getLongInput("Введите новый " + fieldName + " (или 0, чтобы оставить текущий): ");
-        return value == 0 ? currentValue : value;
-    }
-
-    private BigDecimal getUpdatedBigDecimalValue(String fieldName, BigDecimal currentValue) {
-        BigDecimal value = InputHandler.getBigDecimalInput("Введите новую " + fieldName + " (или 0, чтобы оставить текущую): ");
-        return value.compareTo(BigDecimal.ZERO) == 0 ? currentValue : value;
-    }
-
-    private LocalDate getUpdatedDateValue(String fieldName, LocalDate currentValue) {
-        String dateStr = InputHandler.getStringInput("Введите новую " + fieldName + " (ГГГГ-ММ-ДД, или оставьте пустым для текущей): ");
-        return dateStr.isEmpty() ? currentValue : LocalDate.parse(dateStr);
-    }
-
-    private LocalDate getLocalDateFromTimestamp(Timestamp timestamp) {
-        return LocalDate.ofInstant(timestamp.toInstant(), java.time.ZoneId.systemDefault());
     }
 
     private <T extends FormattableEntity> void selectEntitiesForDateRange(DateRangeSupplier<T> supplier, String headerMessage) {
