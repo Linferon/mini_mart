@@ -16,11 +16,26 @@ import java.util.function.Supplier;
 
 public class IncomeService {
     private static IncomeService instance;
-    private final IncomeDao incomeDao = new IncomeDao();
-    private final UserService userService = UserService.getInstance();
-    private final IncomeSourceService sourceService = IncomeSourceService.getInstance();
+    private final IncomeDao incomeDao;
+    private final UserService userService;
+    private final IncomeSourceService sourceService;
+    private final MonthlyBudgetService budgetService;
 
     private IncomeService() {
+        this(new IncomeDao(),
+             UserService.getInstance(),
+             IncomeSourceService.getInstance(),
+             MonthlyBudgetService.getInstance());
+    }
+
+    IncomeService(IncomeDao incomeDao,
+                  UserService userService,
+                  IncomeSourceService sourceService,
+                  MonthlyBudgetService budgetService) {
+        this.incomeDao = incomeDao;
+        this.userService = userService;
+        this.sourceService = sourceService;
+        this.budgetService = budgetService;
     }
 
     public static synchronized IncomeService getInstance() {
@@ -50,14 +65,6 @@ public class IncomeService {
     }
 
 
-    public List<Income> getIncomesByAccountant(Long accountantId) {
-        userService.getUserById(accountantId);
-
-        return findAndValidate(() -> incomeDao.findByAccountant(accountantId),
-                "Доходы, зарегистрированные бухгалтером с ID " + accountantId + " не найдены");
-    }
-
-
     public List<Income> getIncomesByDateRange(LocalDate startDate, LocalDate endDate) {
         validateDateRange(startDate, endDate);
 
@@ -73,6 +80,7 @@ public class IncomeService {
                 .map(Income::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+
 
     public Long addIncome(Income income) {
         validateIncome(income);
@@ -90,13 +98,18 @@ public class IncomeService {
             LoggerUtil.info("Добавлен новый доход с ID " + id +
                     " от источника '" + income.getSource().name() +
                     "', сумма: " + income.getTotalAmount());
+
+            try {
+                budgetService.updateMonthlyBudgetIncome(income.getIncomeDate().toLocalDateTime().toLocalDate(), income.getTotalAmount());
+            } catch (Exception e) {
+                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            }
         }
 
         return id;
     }
 
-
-    public Long addIncome(Long sourceId, BigDecimal amount, LocalDate incomeDate) {
+    public void addIncome(Long sourceId, BigDecimal amount, LocalDate incomeDate) {
         if (sourceId == null) {
             throw new IllegalArgumentException("ID источника дохода должен быть указан");
         }
@@ -116,9 +129,8 @@ public class IncomeService {
                 accountant
         );
 
-        return addIncome(income);
+        addIncome(income);
     }
-
 
     public boolean updateIncome(Income income) {
         if (income.getId() == null) {
@@ -127,13 +139,37 @@ public class IncomeService {
 
         validateIncome(income);
 
-        getIncomeById(income.getId());
+        Income oldIncome = getIncomeById(income.getId());
 
         boolean updated = incomeDao.update(income);
+
         if (updated) {
             LoggerUtil.info("Обновлен доход с ID " + income.getId() +
                     " от источника '" + income.getSource().name() +
                     "', сумма: " + income.getTotalAmount());
+
+            try {
+                if (oldIncome.getTotalAmount().compareTo(income.getTotalAmount()) != 0) {
+                    budgetService.updateMonthlyBudgetIncome(
+                            oldIncome.getIncomeDate().toLocalDateTime().toLocalDate(), 
+                            oldIncome.getTotalAmount().negate());
+
+                    budgetService.updateMonthlyBudgetIncome(
+                            income.getIncomeDate().toLocalDateTime().toLocalDate(), 
+                            income.getTotalAmount());
+                }
+                else if (!oldIncome.getIncomeDate().equals(income.getIncomeDate())) {
+                    budgetService.updateMonthlyBudgetIncome(
+                            oldIncome.getIncomeDate().toLocalDateTime().toLocalDate(), 
+                            oldIncome.getTotalAmount().negate());
+
+                    budgetService.updateMonthlyBudgetIncome(
+                            income.getIncomeDate().toLocalDateTime().toLocalDate(), 
+                            income.getTotalAmount());
+                }
+            } catch (Exception e) {
+                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            }
         } else {
             LoggerUtil.warn("Не удалось обновить доход с ID " + income.getId());
         }
@@ -141,15 +177,23 @@ public class IncomeService {
         return updated;
     }
 
-
     public boolean deleteIncome(Long id) {
         Income income = getIncomeById(id);
 
         boolean deleted = incomeDao.deleteById(id);
+
         if (deleted) {
             LoggerUtil.info("Удален доход с ID " + id +
                     " от источника '" + income.getSource().name() +
                     "', сумма: " + income.getTotalAmount());
+
+            try {
+                budgetService.updateMonthlyBudgetIncome(
+                        income.getIncomeDate().toLocalDateTime().toLocalDate(), 
+                        income.getTotalAmount().negate());
+            } catch (Exception e) {
+                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            }
         } else {
             LoggerUtil.warn("Не удалось удалить доход с ID " + id);
         }

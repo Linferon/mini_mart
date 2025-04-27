@@ -21,7 +21,8 @@ public class PurchaseService {
     private final StockService stockService = StockService.getInstance();
     private final UserService userService = UserService.getInstance();
     private final ExpenseService expenseService = ExpenseService.getInstance();
-    
+    private final MonthlyBudgetService budgetService = MonthlyBudgetService.getInstance();
+
     private PurchaseService() {}
 
     public static synchronized PurchaseService getInstance() {
@@ -30,17 +31,17 @@ public class PurchaseService {
         }
         return instance;
     }
-    
+
     public List<Purchase> getAllPurchases() {
         return findAndValidate(purchaseDao::findAll, "Закупки не найдены");
     }
 
-    
+
     public Purchase getPurchaseById(Long id) {
         return purchaseDao.findById(id)
                 .orElseThrow(() -> new PurchaseNotFoundException("Закупка с ID " + id + " не найдена"));
     }
-    
+
     public List<Purchase> getPurchasesByDateRange(Timestamp startDate, Timestamp endDate) {
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
@@ -78,12 +79,14 @@ public class PurchaseService {
         try {
             expenseService.addPurchaseExpense(purchase.getTotalCost());
             LoggerUtil.info("Автоматически добавлен расход для закупки ID " + purchaseId);
+
+            budgetService.updateMonthlyBudgetExpense(purchase.getPurchaseDate().toLocalDateTime().toLocalDate(), purchase.getTotalCost());
         } catch (Exception e) {
             LoggerUtil.error("Не удалось добавить расход для закупки ID " + purchaseId + ": " + e.getMessage(), e);
         }
     }
 
-    
+
     public void addPurchase(Long productId, Integer quantity, BigDecimal totalCost) {
         if (productId == null) {
             throw new IllegalArgumentException("ID продукта должен быть указан");
@@ -107,7 +110,7 @@ public class PurchaseService {
 
         addPurchase(purchase);
     }
-    
+
     public void updatePurchase(Long purchaseId, Integer quantity) {
         Purchase existingPurchase = getPurchaseById(purchaseId);
 
@@ -132,12 +135,21 @@ public class PurchaseService {
                 updateStockAfterPurchaseUpdate(updatePurchase.getProduct().getId(), quantityDifference);
             }
 
-            expenseService.updatePurchaseExpense(existingPurchase.getTotalCost(), updatePurchase.getTotalCost(),  existingPurchase.getPurchaseDate());
-            LoggerUtil.info("Обновлена закупка с ID " + existingPurchase.getId());
+            try {
+                BigDecimal costDifference = updatePurchase.getTotalCost().subtract(existingPurchase.getTotalCost());
+
+                expenseService.updatePurchaseExpense(existingPurchase.getTotalCost(), updatePurchase.getTotalCost(), existingPurchase.getPurchaseDate());
+                LoggerUtil.info("Обновлена закупка с ID " + existingPurchase.getId());
+
+                if (costDifference.compareTo(BigDecimal.ZERO) != 0) {
+                    budgetService.updateMonthlyBudgetExpense(existingPurchase.getPurchaseDate().toLocalDateTime().toLocalDate(), costDifference);
+                }
+            } catch (Exception e) {
+                LoggerUtil.error("Не удалось обновить расход для закупки ID " + existingPurchase.getId() + ": " + e.getMessage(), e);
+            }
         } else {
             LoggerUtil.warn("Не удалось обновить закупку с ID " + existingPurchase.getId());
         }
-
     }
 
     public void deletePurchase(Long id) {
@@ -148,7 +160,13 @@ public class PurchaseService {
         if (deleted) {
             updateStockAfterPurchaseDeletion(purchase.getProduct().getId(), purchase.getQuantity());
             LoggerUtil.info("Удалена закупка с ID " + id);
-            expenseService.deletePurchaseExpense(purchase.getTotalCost(), purchase.getPurchaseDate());
+
+            try {
+                expenseService.deletePurchaseExpense(purchase.getTotalCost(), purchase.getPurchaseDate());
+                budgetService.updateMonthlyBudgetExpense(purchase.getPurchaseDate().toLocalDateTime().toLocalDate(), purchase.getTotalCost().negate());
+            } catch (Exception e) {
+                LoggerUtil.error("Не удалось удалить расход для закупки ID " + id + ": " + e.getMessage(), e);
+            }
         } else {
             LoggerUtil.warn("Не удалось удалить закупку с ID " + id);
         }

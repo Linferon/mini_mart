@@ -20,12 +20,26 @@ import java.util.function.Supplier;
 
 public class ExpenseService {
     private static ExpenseService instance;
-    private final ExpenseDao expenseDao = new ExpenseDao();
-    private final UserService userService = UserService.getInstance();
-    private final ExpenseCategoryService categoryService = ExpenseCategoryService.getInstance();
-
+    private final ExpenseDao expenseDao;
+    private final UserService userService;
+    private final ExpenseCategoryService categoryService;
+    private final MonthlyBudgetService budgetService;
 
     private ExpenseService() {
+        this(new ExpenseDao(),
+             UserService.getInstance(),
+             ExpenseCategoryService.getInstance(),
+             MonthlyBudgetService.getInstance());
+    }
+
+    ExpenseService(ExpenseDao expenseDao,
+                   UserService userService,
+                   ExpenseCategoryService categoryService,
+                   MonthlyBudgetService budgetService) {
+        this.expenseDao = expenseDao;
+        this.userService = userService;
+        this.categoryService = categoryService;
+        this.budgetService = budgetService;
     }
 
     public static synchronized ExpenseService getInstance() {
@@ -52,15 +66,6 @@ public class ExpenseService {
         return findAndValidate(() -> expenseDao.findByCategory(categoryId),
                 "Расходы по категории с ID " + categoryId + " не найдены");
     }
-
-
-    public List<Expense> getExpensesByAccountant(Long accountantId) {
-        userService.getUserById(accountantId);
-
-        return findAndValidate(() -> expenseDao.findByAccountant(accountantId),
-                "Расходы, зарегистрированные бухгалтером с ID " + accountantId + " не найдены");
-    }
-
 
     public List<Expense> getExpensesByDateRange(Timestamp startDate, Timestamp endDate) {
         validateDateRange(startDate, endDate);
@@ -91,6 +96,13 @@ public class ExpenseService {
             LoggerUtil.info("Добавлен новый расход с ID " + id +
                     " по категории '" + expense.getCategory().name() +
                     "', сумма: " + expense.getTotalAmount());
+
+            // Update monthly budget with the expense amount
+            try {
+                budgetService.updateMonthlyBudgetExpense(expense.getExpenseDate().toLocalDateTime().toLocalDate(), expense.getTotalAmount());
+            } catch (Exception e) {
+                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            }
         }
     }
 
@@ -161,13 +173,36 @@ public class ExpenseService {
 
         validateExpense(expense);
 
-        getExpenseById(expense.getId());
+        Expense oldExpense = getExpenseById(expense.getId());
 
         boolean updated = expenseDao.update(expense);
         if (updated) {
             LoggerUtil.info("Обновлен расход с ID " + expense.getId() +
                     " по категории '" + expense.getCategory().name() +
                     "', сумма: " + expense.getTotalAmount());
+
+            try {
+                if (oldExpense.getTotalAmount().compareTo(expense.getTotalAmount()) != 0) {
+                    budgetService.updateMonthlyBudgetExpense(
+                            oldExpense.getExpenseDate().toLocalDateTime().toLocalDate(), 
+                            oldExpense.getTotalAmount().negate());
+
+                    budgetService.updateMonthlyBudgetExpense(
+                            expense.getExpenseDate().toLocalDateTime().toLocalDate(), 
+                            expense.getTotalAmount());
+                }
+                else if (!oldExpense.getExpenseDate().equals(expense.getExpenseDate())) {
+                    budgetService.updateMonthlyBudgetExpense(
+                            oldExpense.getExpenseDate().toLocalDateTime().toLocalDate(), 
+                            oldExpense.getTotalAmount().negate());
+
+                    budgetService.updateMonthlyBudgetExpense(
+                            expense.getExpenseDate().toLocalDateTime().toLocalDate(), 
+                            expense.getTotalAmount());
+                }
+            } catch (Exception e) {
+                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            }
         } else {
             LoggerUtil.warn("Не удалось обновить расход с ID " + expense.getId());
         }
@@ -188,6 +223,14 @@ public class ExpenseService {
             LoggerUtil.info("Удален расход с ID " + id +
                     " по категории '" + expense.getCategory().name() +
                     "', сумма: " + expense.getTotalAmount());
+
+            try {
+                budgetService.updateMonthlyBudgetExpense(
+                        expense.getExpenseDate().toLocalDateTime().toLocalDate(), 
+                        expense.getTotalAmount().negate());
+            } catch (Exception e) {
+                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            }
         } else {
             LoggerUtil.warn("Не удалось удалить расход с ID " + id);
         }
@@ -208,7 +251,6 @@ public class ExpenseService {
                 .map(Expense::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-
 
     public Map<ExpenseCategory, BigDecimal> getExpensesByCategory(Timestamp startDate, Timestamp endDate) {
         validateDateRange(startDate, endDate);
@@ -247,6 +289,7 @@ public class ExpenseService {
         try {
             totalAmount = getTotalExpenseAmount(start, end);
         } catch (Exception e) {
+            LoggerUtil.warn("Ошибка при расчете среднемесячных расходов: " + e.getMessage());
             return BigDecimal.ZERO;
         }
 

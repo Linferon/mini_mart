@@ -5,7 +5,6 @@ import exception.nsee.SaleNotFoundException;
 import exception.StockUpdateException;
 import model.Income;
 import model.IncomeSource;
-import model.MonthlyBudget;
 import model.Product;
 import model.Sale;
 import model.Stock;
@@ -19,20 +18,39 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class SaleService {
     private static SaleService instance;
-    private final SaleDao saleDao = new SaleDao();
-    private final UserService userService = UserService.getInstance();
-    private final ProductService productService = ProductService.getInstance();
-    private final StockService stockService = StockService.getInstance();
-    private final IncomeService incomeService = IncomeService.getInstance();
-    private final MonthlyBudgetService budgetService = MonthlyBudgetService.getInstance();
+    private final SaleDao saleDao;
+    private final UserService userService;
+    private final ProductService productService;
+    private final StockService stockService;
+    private final IncomeService incomeService;
+    private final MonthlyBudgetService budgetService;
 
-    private static final Long SALES_INCOME_SOURCE_ID = 1L; // ID источника дохода "Продажи"
+    private static final Long SALES_INCOME_SOURCE_ID = 1L;
 
     private SaleService() {
+        this(new SaleDao(), 
+             UserService.getInstance(),
+             ProductService.getInstance(),
+             StockService.getInstance(),
+             IncomeService.getInstance(),
+             MonthlyBudgetService.getInstance());
+    }
+
+    SaleService(SaleDao saleDao,
+                UserService userService,
+                ProductService productService,
+                StockService stockService,
+                IncomeService incomeService,
+                MonthlyBudgetService budgetService) {
+        this.saleDao = saleDao;
+        this.userService = userService;
+        this.productService = productService;
+        this.stockService = stockService;
+        this.incomeService = incomeService;
+        this.budgetService = budgetService;
     }
 
     public static synchronized SaleService getInstance() {
@@ -178,6 +196,22 @@ public class SaleService {
         return deleted;
     }
 
+    private Income findSaleIncome(Sale sale) {
+        try {
+            List<Income> incomes = incomeService.getAllIncomes();
+
+            return incomes.stream()
+                .filter(income -> income.getSource().id().equals(SALES_INCOME_SOURCE_ID) &&
+                                 income.getIncomeDate().equals(sale.getSaleDate()) &&
+                                 income.getTotalAmount().equals(sale.getTotalAmount()))
+                .findFirst()
+                .orElse(null);
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при поиске дохода от продажи: " + e.getMessage(), e);
+            return null;
+        }
+    }
+
     private void addSaleToIncome(Sale sale) {
         try {
             IncomeSource salesSource = IncomeSourceService.getInstance().getIncomeSourceById(SALES_INCOME_SOURCE_ID);
@@ -196,7 +230,7 @@ public class SaleService {
                 LoggerUtil.info("Добавлен новый доход на основе продажи с ID " + sale.getId() +
                         ", сумма: " + sale.getTotalAmount());
 
-                updateMonthlyBudget(sale.getSaleDate().toLocalDateTime().toLocalDate(), sale.getTotalAmount());
+                budgetService.updateMonthlyBudgetIncome(sale.getSaleDate().toLocalDateTime().toLocalDate(), sale.getTotalAmount());
             }
         } catch (Exception e) {
             LoggerUtil.error("Ошибка при добавлении продажи в доходы: " + e.getMessage(), e);
@@ -205,26 +239,20 @@ public class SaleService {
 
     private void updateSaleIncome(Sale oldSale, Sale newSale) {
         try {
-            List<Income> incomes = incomeService.getAllIncomes();
+            Income income = findSaleIncome(oldSale);
 
-            for (Income income : incomes) {
-                if (income.getSource().id().equals(SALES_INCOME_SOURCE_ID) &&
-                        income.getIncomeDate().equals(oldSale.getSaleDate()) &&
-                        income.getTotalAmount().equals(oldSale.getTotalAmount())) {
+            if (income != null) {
+                income.setTotalAmount(newSale.getTotalAmount());
+                income.setIncomeDate(newSale.getSaleDate());
 
-                    income.setTotalAmount(newSale.getTotalAmount());
-                    income.setIncomeDate(newSale.getSaleDate());
+                boolean updated = incomeService.updateIncome(income);
 
-                    boolean updated = incomeService.updateIncome(income);
+                if (updated) {
+                    LoggerUtil.info("Обновлен доход на основе продажи с ID " + oldSale.getId() +
+                            ", новая сумма: " + newSale.getTotalAmount());
 
-                    if (updated) {
-                        LoggerUtil.info("Обновлен доход на основе продажи с ID " + oldSale.getId() +
-                                ", новая сумма: " + newSale.getTotalAmount());
-
-                        updateMonthlyBudget(oldSale.getSaleDate().toLocalDateTime().toLocalDate(), oldSale.getTotalAmount().negate());
-                        updateMonthlyBudget(newSale.getSaleDate().toLocalDateTime().toLocalDate(), newSale.getTotalAmount());
-                    }
-                    break;
+                    budgetService.updateMonthlyBudgetIncome(oldSale.getSaleDate().toLocalDateTime().toLocalDate(), oldSale.getTotalAmount().negate());
+                    budgetService.updateMonthlyBudgetIncome(newSale.getSaleDate().toLocalDateTime().toLocalDate(), newSale.getTotalAmount());
                 }
             }
         } catch (Exception e) {
@@ -234,22 +262,14 @@ public class SaleService {
 
     private void deleteSaleIncome(Sale sale) {
         try {
-            List<Income> incomes = incomeService.getAllIncomes();
+            Income income = findSaleIncome(sale);
 
-            for (Income income : incomes) {
-                if (income.getSource().id().equals(SALES_INCOME_SOURCE_ID) &&
-                        income.getIncomeDate().equals(sale.getSaleDate()) &&
-                        income.getTotalAmount().equals(sale.getTotalAmount())) {
+            if (income != null) {
+                boolean deleted = incomeService.deleteIncome(income.getId());
 
-                    boolean deleted = incomeService.deleteIncome(income.getId());
-
-                    if (deleted) {
-                        LoggerUtil.info("Удален доход на основе продажи с ID " + sale.getId());
-
-                        updateMonthlyBudget(sale.getSaleDate().toLocalDateTime().toLocalDate(), sale.getTotalAmount().negate());
-                    }
-
-                    break;
+                if (deleted) {
+                    LoggerUtil.info("Удален доход на основе продажи с ID " + sale.getId());
+                    budgetService.updateMonthlyBudgetIncome(sale.getSaleDate().toLocalDateTime().toLocalDate(), sale.getTotalAmount().negate());
                 }
             }
         } catch (Exception e) {
@@ -257,67 +277,6 @@ public class SaleService {
         }
     }
 
-    private void updateMonthlyBudget(LocalDate date, BigDecimal amount) {
-        try {
-            LocalDate firstDayOfMonth = date.withDayOfMonth(1);
-
-            MonthlyBudget budget;
-            try {
-                budget = budgetService.getBudgetByDate(firstDayOfMonth);
-            } catch (Exception e) {
-                LoggerUtil.info("Создание нового месячного бюджета на " + firstDayOfMonth);
-
-                budget = new MonthlyBudget(
-                        null,
-                        firstDayOfMonth,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        null,
-                        null,
-                        userService.getCurrentUser()
-                );
-
-                Long budgetId = budgetService.createBudget(budget);
-                if (budgetId != null) {
-                    budget.setId(budgetId);
-                } else {
-                    throw new RuntimeException("Не удалось создать месячный бюджет");
-                }
-            }
-
-            BigDecimal newActualIncome = budget.getActualIncome().add(amount);
-
-            budgetService.updateActualValues(budget.getId(), newActualIncome, budget.getActualExpenses());
-
-            LoggerUtil.info("Обновлен месячный бюджет на " + firstDayOfMonth +
-                    ", новый фактический доход: " + newActualIncome);
-
-        } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
-        }
-    }
-
-    private Map<Product, Integer> groupProductsByQuantity(List<Sale> sales, int limit) {
-        Map<Product, Integer> productQuantities = new HashMap<>();
-        for (Sale sale : sales) {
-            Product product = sale.getProduct();
-            int currentQuantity = productQuantities.getOrDefault(product, 0);
-            productQuantities.put(product, currentQuantity + sale.getQuantity());
-        }
-
-        return productQuantities.entrySet().stream()
-                .sorted(Map.Entry.<Product, Integer>comparingByValue().reversed())
-                .limit(limit)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
-    }
 
     private void prepareSaleData(Sale sale) {
         if (sale.getSaleDate() == null) {
@@ -381,56 +340,35 @@ public class SaleService {
         sale.setTotalAmount(product.getSellPrice().multiply(BigDecimal.valueOf(sale.getQuantity())));
     }
 
-    private void updateStockAfterSale(Long productId, Integer quantity) {
+    private void updateStock(Long productId, int quantityChange, String operationType) {
         try {
             Stock stock = stockService.getStockByProductId(productId);
-
-            int newQuantity = stock.getQuantity() - quantity;
-
-            stockService.updateStockQuantity(productId, newQuantity);
-
-            LoggerUtil.info("Обновлено количество товара с ID " + productId +
-                    " на складе после продажи: " + newQuantity);
-        } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении склада после продажи: " + e.getMessage(), e);
-            throw new StockUpdateException("Ошибка при обновлении склада после продажи");
-        }
-    }
-
-    private void updateStockAfterSaleReturn(Long productId, Integer quantity) {
-        try {
-            Stock stock = stockService.getStockByProductId(productId);
-
-            int newQuantity = stock.getQuantity() + quantity;
-
-            stockService.updateStockQuantity(productId, newQuantity);
-
-            LoggerUtil.info("Обновлено количество товара с ID " + productId +
-                    " на складе после возврата: " + newQuantity);
-        } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении склада после возврата: " + e.getMessage(), e);
-            throw new StockUpdateException("Ошибка при обновлении склада после возврата");
-        }
-    }
-
-    private void updateStockAfterSaleUpdate(Long productId, Integer quantityDifference) {
-        try {
-            Stock stock = stockService.getStockByProductId(productId);
-
-            int newQuantity = stock.getQuantity() - quantityDifference;
+            int newQuantity = stock.getQuantity() + quantityChange;
 
             if (newQuantity < 0) {
-                throw new IllegalStateException("Недостаточно товара на складе для обновления");
+                throw new IllegalStateException("Недостаточно товара на складе для " + operationType);
             }
 
             stockService.updateStockQuantity(productId, newQuantity);
 
             LoggerUtil.info("Обновлено количество товара с ID " + productId +
-                    " на складе после обновления продажи: " + newQuantity);
+                    " на складе после " + operationType + ": " + newQuantity);
         } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении склада после обновления продажи: " + e.getMessage(), e);
-            throw new StockUpdateException("Ошибка при обновлении склада после обновления продажи");
+            LoggerUtil.error("Ошибка при обновлении склада после " + operationType + ": " + e.getMessage(), e);
+            throw new StockUpdateException("Ошибка при обновлении склада после " + operationType);
         }
+    }
+
+    private void updateStockAfterSale(Long productId, Integer quantity) {
+        updateStock(productId, -quantity, "продажи");
+    }
+
+    private void updateStockAfterSaleReturn(Long productId, Integer quantity) {
+        updateStock(productId, quantity, "возврата");
+    }
+
+    private void updateStockAfterSaleUpdate(Long productId, Integer quantityDifference) {
+        updateStock(productId, -quantityDifference, "обновления продажи");
     }
 
     private void validateSale(Sale sale) {

@@ -126,7 +126,7 @@ public class MonthlyBudgetService {
         return updated;
     }
 
-    public boolean updateActualValues(Long budgetId, BigDecimal actualIncome, BigDecimal actualExpenses) {
+    public void updateActualValues(Long budgetId, BigDecimal actualIncome, BigDecimal actualExpenses) {
         validatePositiveAmount(actualIncome, "Фактический доход");
         validatePositiveAmount(actualExpenses, "Фактические расходы");
 
@@ -143,7 +143,6 @@ public class MonthlyBudgetService {
             LoggerUtil.warn("Не удалось обновить фактические значения для бюджета с ID " + budgetId);
         }
 
-        return updated;
     }
 
     public boolean deleteBudget(Long id) {
@@ -240,6 +239,37 @@ public class MonthlyBudgetService {
         }
     }
 
+    public MonthlyBudget getOrCreateMonthlyBudget(LocalDate date) {
+        LocalDate firstDayOfMonth = date.withDayOfMonth(1);
+
+        try {
+            return getBudgetByDate(firstDayOfMonth);
+        } catch (Exception e) {
+            LoggerUtil.info("Создание нового месячного бюджета на " + firstDayOfMonth);
+
+            MonthlyBudget budget = new MonthlyBudget(
+                    null,
+                    firstDayOfMonth,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
+                    null,
+                    userService.getCurrentUser()
+            );
+
+            Long budgetId = createBudget(budget);
+            if (budgetId != null) {
+                budget.setId(budgetId);
+                return budget;
+            } else {
+                throw new IllegalArgumentException("Не удалось создать месячный бюджет");
+            }
+        }
+    }
+
     private void setupBudget(MonthlyBudget budget) {
         if (budget.getDirector() == null) {
             budget.setDirector(userService.getCurrentUser());
@@ -293,5 +323,33 @@ public class MonthlyBudgetService {
         }
 
         return budgets;
+    }
+
+    public void updateMonthlyBudgetIncome(LocalDate date, BigDecimal amount) {
+        try {
+            MonthlyBudget budget = getOrCreateMonthlyBudget(date);
+            BigDecimal newActualIncome = budget.getActualIncome().add(amount);
+
+            updateActualValues(budget.getId(), newActualIncome, budget.getActualExpenses());
+
+            LoggerUtil.info("Обновлен месячный бюджет на " + date.withDayOfMonth(1) +
+                    ", новый фактический доход: " + newActualIncome);
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+        }
+    }
+
+    public void updateMonthlyBudgetExpense(LocalDate date, BigDecimal amount) {
+        try {
+            MonthlyBudget budget = getOrCreateMonthlyBudget(date);
+            BigDecimal newActualExpenses = budget.getActualExpenses().add(amount);
+
+            updateActualValues(budget.getId(), budget.getActualIncome(), newActualExpenses);
+
+            LoggerUtil.info("Обновлен месячный бюджет на " + date.withDayOfMonth(1) +
+                    ", новые фактические расходы: " + newActualExpenses);
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+        }
     }
 }
