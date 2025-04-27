@@ -37,7 +37,7 @@ public class ProductService {
 
     public void addProduct(Product product) {
         validateProduct(product);
-        productCategoryService.getCategoryById(product.getCategory().getId());
+        productCategoryService.getCategoryById(product.getCategory().id());
 
         Timestamp now = Timestamp.from(Instant.now());
         if (product.getCreatedAt() == null) {
@@ -55,7 +55,7 @@ public class ProductService {
         validateProduct(product);
 
         getProductById(product.getId());
-        productCategoryService.getCategoryById(product.getCategory().getId());
+        productCategoryService.getCategoryById(product.getCategory().id());
 
         Timestamp now = Timestamp.from(Instant.now());
         product.setUpdatedAt(now);
@@ -84,7 +84,7 @@ public class ProductService {
             throw new IllegalArgumentException("Название продукта не может быть пустым");
         }
 
-        if (product.getCategory() == null || product.getCategory().getId() == null) {
+        if (product.getCategory() == null || product.getCategory().id() == null) {
             throw new IllegalArgumentException("Категория продукта должна быть указана");
         }
 

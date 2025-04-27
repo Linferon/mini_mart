@@ -18,6 +18,7 @@ public class Product implements FormattableEntity {
     private static final int NAME_WIDTH = 30;
     private static final int CATEGORY_WIDTH = 20;
     private static final int PRICE_WIDTH = 15;
+
     public Product(Long id, String name) {
         this.id = id;
         this.name = name;
@@ -28,10 +29,14 @@ public class Product implements FormattableEntity {
         this.category = category;
     }
 
-    public Product(Long id, String name, ProductCategory category, BigDecimal buyPrice, BigDecimal sellPrice, Timestamp createdAt, Timestamp updatedAt) {
+    public Product(Long id, String name, ProductCategory category, BigDecimal buyPrice, BigDecimal sellPrice) {
         this(id, name, category);
         this.buyPrice = buyPrice;
         this.sellPrice = sellPrice;
+    }
+
+    public Product(Long id, String name, ProductCategory category, BigDecimal buyPrice, BigDecimal sellPrice, Timestamp createdAt, Timestamp updatedAt) {
+        this(id, name, category, buyPrice, sellPrice);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -41,7 +46,7 @@ public class Product implements FormattableEntity {
         return "Продукт" +
                 "\nid:" + id +
                 "\nназвание: " + name +
-                "\nкатегория: " + (category != null ? category.getName() : "не указана") +
+                "\nкатегория: " + (category != null ? category.name() : "не указана") +
                 "\nцена закупки: " + buyPrice +
                 "\nцена продажи: " + sellPrice;
     }
@@ -59,7 +64,7 @@ public class Product implements FormattableEntity {
     public String toTableRow() {
         return TableFormatter.formatCell(id, ID_WIDTH) +
                 TableFormatter.formatCell(name, NAME_WIDTH) +
-                TableFormatter.formatCell(category.getName(), CATEGORY_WIDTH) +
+                TableFormatter.formatCell(category.name(), CATEGORY_WIDTH) +
                 TableFormatter.formatCell(buyPrice, PRICE_WIDTH) +
                 TableFormatter.formatCell(sellPrice, PRICE_WIDTH);
     }

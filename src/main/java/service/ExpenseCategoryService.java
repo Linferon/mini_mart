@@ -29,6 +29,11 @@ public class ExpenseCategoryService {
                 .orElseThrow(() -> new CategoryNotFoundException("Категория затрат с ID " + id + " не найдена"));
     }
 
+    public ExpenseCategory getExpenseCategoryByName(String categoryName) {
+        return categoryDao.findByName(categoryName)
+                .orElseThrow(() -> new CategoryNotFoundException("Категория затрат с именем " + categoryName + " не найдена"));
+    }
+
     private List<ExpenseCategory> findAndValidate(Supplier<List<ExpenseCategory>> supplier) {
         List<ExpenseCategory> categories = supplier.get();
 

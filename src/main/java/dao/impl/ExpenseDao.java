@@ -98,7 +98,7 @@ public class ExpenseDao extends Dao<Expense> {
                     " (CATEGORY_ID, TOTAL_AMOUNT, EXPENSE_DATE, ACCOUNTANT_ID) " +
                     "VALUES (?, ?, ?, ?)";
             Long id = insert(sql,
-                    expense.getCategory().getId(),
+                    expense.getCategory().id(),
                     expense.getTotalAmount(),
                     expense.getExpenseDate() != null ? expense.getExpenseDate() : Timestamp.from(Instant.now()),
                     expense.getAccountant().getId());
@@ -117,7 +117,7 @@ public class ExpenseDao extends Dao<Expense> {
                 " SET CATEGORY_ID = ?, TOTAL_AMOUNT = ?, " +
                 "EXPENSE_DATE = ?, ACCOUNTANT_ID = ? WHERE ID = ?";
         return update(sql,
-                expense.getCategory().getId(),
+                expense.getCategory().id(),
                 expense.getTotalAmount(),
                 expense.getExpenseDate(),
                 expense.getAccountant().getId(),

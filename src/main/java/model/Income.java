@@ -32,7 +32,7 @@ public class Income implements FormattableEntity {
     public String toString() {
         return "Доход" +
                 "\nid: " + id +
-                "\nисточник: " + (source != null ? source.getName() : "не указан") +
+                "\nисточник: " + (source != null ? source.name() : "не указан") +
                 "\nсумма: " + totalAmount +
                 "\nдата: " + (incomeDate != null ? incomeDate.toLocalDateTime().format(DATE_FORMATTER) : "не указана") +
                 "\nбухгалтер: " + (accountant != null ? accountant.getFullName() : "не указан");
@@ -50,7 +50,7 @@ public class Income implements FormattableEntity {
     @Override
     public String toTableRow() {
         return TableFormatter.formatCell(id, ID_WIDTH) +
-                TableFormatter.formatCell(source != null ? source.getName() : "-", SOURCE_WIDTH) +
+                TableFormatter.formatCell(source != null ? source.name() : "-", SOURCE_WIDTH) +
                 TableFormatter.formatCell(totalAmount, AMOUNT_WIDTH) +
                 TableFormatter.formatCell(getFormattedIncomeDate(), DATE_WIDTH) +
                 TableFormatter.formatCell(accountant != null ? accountant.getFullName() : "-", ACCOUNTANT_WIDTH);

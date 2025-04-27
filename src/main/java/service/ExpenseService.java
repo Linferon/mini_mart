@@ -1,15 +1,10 @@
-package service.impl;
+package service;
 
 import dao.impl.ExpenseDao;
-import exception.AuthenticationException;
-import exception.AuthorizationException;
 import exception.nsee.ExpenseNotFoundException;
 import model.Expense;
 import model.ExpenseCategory;
 import model.User;
-import service.interfaces.ExpenseCategoryService;
-import service.interfaces.ExpenseService;
-import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;
@@ -23,59 +18,64 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class ExpenseServiceImpl implements ExpenseService {
+public class ExpenseService {
+    private static ExpenseService instance;
     private final ExpenseDao expenseDao = new ExpenseDao();
-    private final UserService userService = new UserServiceImpl();
-    private final ExpenseCategoryService categoryService = new ExpenseCategoryServiceImpl();
+    private final UserService userService = UserService.getInstance();
+    private final ExpenseCategoryService categoryService = ExpenseCategoryService.getInstance();
 
-    private static final String ROLE_DIRECTOR = "Директор";
-    private static final String ROLE_ACCOUNTANT = "Бухгалтер";
 
-    @Override
+    private ExpenseService() {
+    }
+
+    public static synchronized ExpenseService getInstance() {
+        if (instance == null) {
+            instance = new ExpenseService();
+        }
+        return instance;
+    }
+
     public List<Expense> getAllExpenses() {
-        checkAuthentication();
         return findAndValidate(expenseDao::findAll, "Расходы не найдены");
     }
 
-    @Override
+
     public Expense getExpenseById(Long id) {
-        checkAuthentication();
         return expenseDao.findById(id)
                 .orElseThrow(() -> new ExpenseNotFoundException("Расход с ID " + id + " не найден"));
     }
 
-    @Override
-    public List<Expense> getExpensesByCategory(Long categoryId) {
-        checkAuthentication();
 
+    public List<Expense> getExpensesByCategory(Long categoryId) {
         categoryService.getExpenseCategoryById(categoryId);
 
         return findAndValidate(() -> expenseDao.findByCategory(categoryId),
                 "Расходы по категории с ID " + categoryId + " не найдены");
     }
 
-    @Override
-    public List<Expense> getExpensesByAccountant(Long accountantId) {
-        checkAuthentication();
 
+    public List<Expense> getExpensesByAccountant(Long accountantId) {
         userService.getUserById(accountantId);
 
         return findAndValidate(() -> expenseDao.findByAccountant(accountantId),
                 "Расходы, зарегистрированные бухгалтером с ID " + accountantId + " не найдены");
     }
 
-    @Override
+
     public List<Expense> getExpensesByDateRange(Timestamp startDate, Timestamp endDate) {
-        checkAuthentication();
         validateDateRange(startDate, endDate);
 
         return findAndValidate(() -> expenseDao.findByDateRange(startDate, endDate),
                 "Расходы за период с " + startDate + " по " + endDate + " не найдены");
     }
 
-    @Override
-    public Long addExpense(Expense expense) {
-        checkAccountantPermission();
+    public BigDecimal getTotalExpenses(List<Expense> expenses) {
+        return expenses.stream()
+                .map(Expense::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public void addExpense(Expense expense) {
         validateExpense(expense);
 
         if (expense.getExpenseDate() == null) {
@@ -89,17 +89,21 @@ public class ExpenseServiceImpl implements ExpenseService {
         Long id = expenseDao.save(expense);
         if (id != null) {
             LoggerUtil.info("Добавлен новый расход с ID " + id +
-                    " по категории '" + expense.getCategory().getName() +
+                    " по категории '" + expense.getCategory().name() +
                     "', сумма: " + expense.getTotalAmount());
         }
-
-        return id;
     }
 
-    @Override
-    public Long addExpense(Long categoryId, BigDecimal amount) {
-        checkAccountantPermission();
+    public void addPurchaseExpense(BigDecimal totalAmount) {
+        ExpenseCategory category = categoryService.getExpenseCategoryByName("Покупка товара");
+        Expense expense = new Expense(
+                category,
+                totalAmount
+        );
+        addExpense(expense);
+    }
 
+    public void addExpense(Long categoryId, BigDecimal amount, Timestamp expenseDate) {
         if (categoryId == null) {
             throw new IllegalArgumentException("ID категории должен быть указан");
         }
@@ -112,20 +116,45 @@ public class ExpenseServiceImpl implements ExpenseService {
         User accountant = userService.getCurrentUser();
 
         Expense expense = new Expense(
-                null,
                 category,
                 amount,
-                Timestamp.from(Instant.now()),
-                accountant
-        );
+                expenseDate);
 
-        return addExpense(expense);
+        expense.setAccountant(accountant);
+
+        addExpense(expense);
     }
 
-    @Override
-    public boolean updateExpense(Expense expense) {
-        checkAccountantPermission();
+    public void addExpense(Long categoryId, BigDecimal amount) {
+        if (categoryId == null) {
+            throw new IllegalArgumentException("ID категории должен быть указан");
+        }
 
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Сумма должна быть положительным числом");
+        }
+
+        ExpenseCategory category = categoryService.getExpenseCategoryById(categoryId);
+
+        Expense expense = new Expense(
+                category,
+                amount);
+
+        addExpense(expense);
+    }
+
+    public void updatePurchaseExpense(BigDecimal oldTotalAmount, BigDecimal newTotalAmount, Timestamp purchaseDate) {
+        Expense expense = getExpenseByAmountAndDate(oldTotalAmount, purchaseDate);
+        expense.setTotalAmount(newTotalAmount);
+        updateExpense(expense);
+    }
+
+    public Expense getExpenseByAmountAndDate(BigDecimal totalAmount, Timestamp purchaseDate) {
+        return expenseDao.findByTotalAmountAndDate(totalAmount, purchaseDate)
+                .orElseThrow(() -> new ExpenseNotFoundException("Расход с не был найден"));
+    }
+
+    public boolean updateExpense(Expense expense) {
         if (expense.getId() == null) {
             throw new IllegalArgumentException("ID расхода не может быть пустым при обновлении");
         }
@@ -137,7 +166,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         boolean updated = expenseDao.update(expense);
         if (updated) {
             LoggerUtil.info("Обновлен расход с ID " + expense.getId() +
-                    " по категории '" + expense.getCategory().getName() +
+                    " по категории '" + expense.getCategory().name() +
                     "', сумма: " + expense.getTotalAmount());
         } else {
             LoggerUtil.warn("Не удалось обновить расход с ID " + expense.getId());
@@ -146,29 +175,26 @@ public class ExpenseServiceImpl implements ExpenseService {
         return updated;
     }
 
-    @Override
-    public boolean deleteExpense(Long id) {
-        if (!userService.hasRole(ROLE_DIRECTOR, ROLE_ACCOUNTANT)) {
-            throw new AuthorizationException("Только директор или бухгалтер может удалять расходы");
-        }
+    public void deletePurchaseExpense(BigDecimal totalCost, Timestamp purchaseDate) {
+        Expense expense = getExpenseByAmountAndDate(totalCost, purchaseDate);
+        deleteExpense(expense.getId());
+    }
 
+    public void deleteExpense(Long id) {
         Expense expense = getExpenseById(id);
 
         boolean deleted = expenseDao.deleteById(id);
         if (deleted) {
             LoggerUtil.info("Удален расход с ID " + id +
-                    " по категории '" + expense.getCategory().getName() +
+                    " по категории '" + expense.getCategory().name() +
                     "', сумма: " + expense.getTotalAmount());
         } else {
             LoggerUtil.warn("Не удалось удалить расход с ID " + id);
         }
-
-        return deleted;
     }
 
-    @Override
+
     public BigDecimal getTotalExpenseAmount(Timestamp startDate, Timestamp endDate) {
-        checkAuthentication();
         validateDateRange(startDate, endDate);
 
         List<Expense> expenses;
@@ -183,9 +209,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    @Override
+
     public Map<ExpenseCategory, BigDecimal> getExpensesByCategory(Timestamp startDate, Timestamp endDate) {
-        checkAuthentication();
         validateDateRange(startDate, endDate);
 
         List<Expense> expenses;
@@ -206,10 +231,8 @@ public class ExpenseServiceImpl implements ExpenseService {
         return result;
     }
 
-    @Override
-    public BigDecimal getMonthlyAverage(int numberOfMonths) {
-        checkAuthentication();
 
+    public BigDecimal getMonthlyAverage(int numberOfMonths) {
         if (numberOfMonths <= 0) {
             throw new IllegalArgumentException("Количество месяцев должно быть положительным числом");
         }
@@ -232,7 +255,7 @@ public class ExpenseServiceImpl implements ExpenseService {
 
 
     private void validateExpense(Expense expense) {
-        if (expense.getCategory() == null || expense.getCategory().getId() == null) {
+        if (expense.getCategory() == null || expense.getCategory().id() == null) {
             throw new IllegalArgumentException("Категория расхода должна быть указана");
         }
 
@@ -240,7 +263,7 @@ public class ExpenseServiceImpl implements ExpenseService {
             throw new IllegalArgumentException("Сумма расхода должна быть положительным числом");
         }
 
-        categoryService.getExpenseCategoryById(expense.getCategory().getId());
+        categoryService.getExpenseCategoryById(expense.getCategory().id());
 
         if (expense.getAccountant() != null && expense.getAccountant().getId() != null) {
             userService.getUserById(expense.getAccountant().getId());
@@ -266,19 +289,5 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
 
         return expenses;
-    }
-
-    private void checkAuthentication() {
-        if (!userService.isAuthenticated()) {
-            throw new AuthenticationException("Пользователь не авторизован");
-        }
-    }
-
-    private void checkAccountantPermission() {
-        checkAuthentication();
-
-        if (!userService.hasRole(ROLE_ACCOUNTANT, ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только бухгалтер или директор может управлять расходами");
-        }
     }
 }

@@ -20,10 +20,19 @@ public class Expense implements FormattableEntity {
     private static final int ACCOUNTANT_WIDTH = 25;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    public Expense(Long id, ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate, User accountant) {
-        this.id = id;
+    public Expense(ExpenseCategory category, BigDecimal totalAmount) {
         this.category = category;
         this.totalAmount = totalAmount;
+    }
+
+    public Expense(ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate) {
+        this(category, totalAmount);
+        this.expenseDate = expenseDate;
+    }
+
+    public Expense(Long id, ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate, User accountant) {
+        this(category, totalAmount);
+        this.id = id;
         this.expenseDate = expenseDate;
         this.accountant = accountant;
     }
@@ -32,7 +41,7 @@ public class Expense implements FormattableEntity {
     public String toString() {
         return "Расход" +
                 "\nid: " + id +
-                "\nкатегория: " + (category != null ? category.getName() : "не указана") +
+                "\nкатегория: " + (category != null ? category.name() : "не указана") +
                 "\nсумма: " + totalAmount +
                 "\nдата: " + (expenseDate != null ? expenseDate.toLocalDateTime().format(DATE_FORMATTER) : "не указана") +
                 "\nбухгалтер: " + (accountant != null ? accountant.getFullName() : "не указан");
@@ -50,7 +59,7 @@ public class Expense implements FormattableEntity {
     @Override
     public String toTableRow() {
         return TableFormatter.formatCell(id, ID_WIDTH) +
-                TableFormatter.formatCell(category != null ? category.getName() : "-", CATEGORY_WIDTH) +
+                TableFormatter.formatCell(category != null ? category.name() : "-", CATEGORY_WIDTH) +
                 TableFormatter.formatCell(totalAmount, AMOUNT_WIDTH) +
                 TableFormatter.formatCell(getFormattedExpenseDate(), DATE_WIDTH) +
                 TableFormatter.formatCell(accountant != null ? accountant.getFullName() : "-", ACCOUNTANT_WIDTH);

@@ -17,9 +17,14 @@ public class Stock implements FormattableEntity {
     private static final int UPDATED_WIDTH = 20;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    public Stock(Product product, Integer quantity, Timestamp createdAt, Timestamp updatedAt) {
+    public Stock(Product product, Integer quantity) {
         this.product = product;
         this.quantity = quantity;
+    }
+
+
+    public Stock(Product product, Integer quantity, Timestamp createdAt, Timestamp updatedAt) {
+        this(product, quantity);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }

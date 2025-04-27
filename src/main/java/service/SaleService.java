@@ -1,18 +1,15 @@
-package service.impl;
+package service;
 
 import dao.impl.SaleDao;
-import exception.AuthenticationException;
-import exception.AuthorizationException;
 import exception.nsee.SaleNotFoundException;
 import exception.StockUpdateException;
+import model.Income;
+import model.IncomeSource;
+import model.MonthlyBudget;
 import model.Product;
 import model.Sale;
 import model.Stock;
 import model.User;
-import service.interfaces.ProductService;
-import service.interfaces.SaleService;
-import service.interfaces.StockService;
-import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;
@@ -20,56 +17,55 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class SaleServiceImpl implements SaleService {
+public class SaleService {
+    private static SaleService instance;
     private final SaleDao saleDao = new SaleDao();
-    private final UserService userService = new UserServiceImpl();
-    private final ProductService productService = new ProductServiceImpl();
-    private final StockService stockService = new StockServiceImpl();
+    private final UserService userService = UserService.getInstance();
+    private final ProductService productService = ProductService.getInstance();
+    private final StockService stockService = StockService.getInstance();
+    private final IncomeService incomeService = IncomeService.getInstance();
+    private final MonthlyBudgetService budgetService = MonthlyBudgetService.getInstance();
 
-    private static final String ROLE_DIRECTOR = "Директор";
-    private static final String ROLE_CASHIER = "Кассир";
+    private static final Long SALES_INCOME_SOURCE_ID = 1L; // ID источника дохода "Продажи"
 
-    @Override
+    private SaleService() {
+    }
+
+    public static synchronized SaleService getInstance() {
+        if (instance == null) {
+            instance = new SaleService();
+        }
+        return instance;
+    }
+
     public List<Sale> getAllSales() {
-        checkAuthentication();
         return findAndValidate(saleDao::findAll, "Продажи не найдены");
     }
 
-    @Override
     public Sale getSaleById(Long id) {
-        checkAuthentication();
         return saleDao.findById(id)
                 .orElseThrow(() -> new SaleNotFoundException("Продажа с ID " + id + " не найдена"));
     }
 
-    @Override
     public List<Sale> getSalesByProduct(Long productId) {
-        checkAuthentication();
-
         productService.getProductById(productId);
 
         return findAndValidate(() -> saleDao.findByProduct(productId),
                 "Продажи товара с ID " + productId + " не найдены");
     }
 
-    @Override
     public List<Sale> getSalesByCashier(Long cashierId) {
-        checkAuthentication();
-
         userService.getUserById(cashierId);
 
         return findAndValidate(() -> saleDao.findByCashier(cashierId),
                 "Продажи, выполненные кассиром с ID " + cashierId + " не найдены");
     }
 
-    @Override
     public List<Sale> getSalesByDateRange(LocalDate startDate, LocalDate endDate) {
-        checkAuthentication();
         validateDateRange(startDate, endDate);
 
         Timestamp start = Timestamp.valueOf(startDate.atStartOfDay());
@@ -79,19 +75,20 @@ public class SaleServiceImpl implements SaleService {
                 "Продажи за период с " + startDate + " по " + endDate + " не найдены");
     }
 
-    @Override
-    public Long addSale(Sale sale) {
-        checkCashierPermission();
+    public BigDecimal getAvgSale(BigDecimal amount, List<Sale> sales) {
+        return amount.divide(BigDecimal.valueOf(sales.size()), 2, RoundingMode.HALF_UP);
+    }
+
+    public Sale addSale(Sale sale) {
         validateSale(sale);
-
         verifyStockAvailability(sale.getProduct().getId(), sale.getQuantity());
-
         prepareSaleData(sale);
-
         Long id = saleDao.save(sale);
 
         if (id != null) {
             updateStockAfterSale(sale.getProduct().getId(), sale.getQuantity());
+
+            addSaleToIncome(sale);
 
             LoggerUtil.info("Добавлена новая продажа с ID " + id +
                     " товара " + sale.getProduct().getName() +
@@ -99,13 +96,11 @@ public class SaleServiceImpl implements SaleService {
                     ", сумма: " + sale.getTotalAmount());
         }
 
-        return id;
+        return sale;
     }
 
-    @Override
-    public Long addSale(Long productId, Integer quantity, LocalDateTime saleDateTime) {
-        checkCashierPermission();
 
+    public Sale addSale(Long productId, Integer quantity, LocalDateTime saleDateTime) {
         if (productId == null) {
             throw new IllegalArgumentException("ID товара должен быть указан");
         }
@@ -131,12 +126,8 @@ public class SaleServiceImpl implements SaleService {
         return addSale(sale);
     }
 
-    @Override
-    public boolean updateSale(Sale sale) {
-        if (!userService.hasRole(ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только директор может изменять продажи");
-        }
 
+    public boolean updateSale(Sale sale) {
         if (sale.getId() == null) {
             throw new IllegalArgumentException("ID продажи не может быть пустым при обновлении");
         }
@@ -153,6 +144,10 @@ public class SaleServiceImpl implements SaleService {
 
         boolean updated = saleDao.update(sale);
         if (updated) {
+            if (existingSale.getTotalAmount().compareTo(sale.getTotalAmount()) != 0) {
+                updateSaleIncome(existingSale, sale);
+            }
+
             LoggerUtil.info("Обновлена продажа с ID " + sale.getId() +
                     " товара " + sale.getProduct().getName() +
                     ", количество: " + sale.getQuantity() +
@@ -164,17 +159,14 @@ public class SaleServiceImpl implements SaleService {
         return updated;
     }
 
-    @Override
     public boolean deleteSale(Long id) {
-        if (!userService.hasRole(ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только администратор или директор может удалять продажи");
-        }
-
         Sale sale = getSaleById(id);
 
         boolean deleted = saleDao.deleteById(id);
         if (deleted) {
             updateStockAfterSaleReturn(sale.getProduct().getId(), sale.getQuantity());
+
+            deleteSaleIncome(sale);
 
             LoggerUtil.info("Удалена продажа с ID " + id +
                     " товара " + sale.getProduct().getName() +
@@ -186,67 +178,126 @@ public class SaleServiceImpl implements SaleService {
         return deleted;
     }
 
-    @Override
-    public BigDecimal getTotalSalesAmount(LocalDate startDate, LocalDate endDate) {
-        checkAuthentication();
-        validateDateRange(startDate, endDate);
-
-        List<Sale> sales;
+    private void addSaleToIncome(Sale sale) {
         try {
-            sales = getSalesByDateRange(startDate, endDate);
-        } catch (SaleNotFoundException e) {
-            return BigDecimal.ZERO;
-        }
+            IncomeSource salesSource = IncomeSourceService.getInstance().getIncomeSourceById(SALES_INCOME_SOURCE_ID);
 
-        return sales.stream()
-                .map(Sale::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            Income income = new Income(
+                    null,
+                    salesSource,
+                    sale.getTotalAmount(),
+                    sale.getSaleDate(),
+                    sale.getCashier()
+            );
+
+            Long incomeId = incomeService.addIncome(income);
+
+            if (incomeId != null) {
+                LoggerUtil.info("Добавлен новый доход на основе продажи с ID " + sale.getId() +
+                        ", сумма: " + sale.getTotalAmount());
+
+                updateMonthlyBudget(sale.getSaleDate().toLocalDateTime().toLocalDate(), sale.getTotalAmount());
+            }
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при добавлении продажи в доходы: " + e.getMessage(), e);
+        }
     }
 
-    @Override
-    public Map<Product, Integer> getTopSellingProducts(LocalDate startDate, LocalDate endDate, int limit) {
-        checkAuthentication();
-        validateDateRange(startDate, endDate);
-
-        if (limit <= 0) {
-            throw new IllegalArgumentException("Лимит должен быть положительным числом");
-        }
-
-        List<Sale> sales;
+    private void updateSaleIncome(Sale oldSale, Sale newSale) {
         try {
-            sales = getSalesByDateRange(startDate, endDate);
-        } catch (SaleNotFoundException e) {
-            return new HashMap<>();
-        }
+            List<Income> incomes = incomeService.getAllIncomes();
 
-        return groupProductsByQuantity(sales, limit);
+            for (Income income : incomes) {
+                if (income.getSource().id().equals(SALES_INCOME_SOURCE_ID) &&
+                        income.getIncomeDate().equals(oldSale.getSaleDate()) &&
+                        income.getTotalAmount().equals(oldSale.getTotalAmount())) {
+
+                    income.setTotalAmount(newSale.getTotalAmount());
+                    income.setIncomeDate(newSale.getSaleDate());
+
+                    boolean updated = incomeService.updateIncome(income);
+
+                    if (updated) {
+                        LoggerUtil.info("Обновлен доход на основе продажи с ID " + oldSale.getId() +
+                                ", новая сумма: " + newSale.getTotalAmount());
+
+                        updateMonthlyBudget(oldSale.getSaleDate().toLocalDateTime().toLocalDate(), oldSale.getTotalAmount().negate());
+                        updateMonthlyBudget(newSale.getSaleDate().toLocalDateTime().toLocalDate(), newSale.getTotalAmount());
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при обновлении дохода от продажи: " + e.getMessage(), e);
+        }
     }
 
-    @Override
-    public Map<User, BigDecimal> getSalesByCashiers(LocalDate startDate, LocalDate endDate) {
-        checkAuthentication();
-        validateDateRange(startDate, endDate);
-
-        List<Sale> sales;
+    private void deleteSaleIncome(Sale sale) {
         try {
-            sales = getSalesByDateRange(startDate, endDate);
-        } catch (SaleNotFoundException e) {
-            return new HashMap<>();
-        }
+            List<Income> incomes = incomeService.getAllIncomes();
 
-        return groupSalesByCashier(sales);
+            for (Income income : incomes) {
+                if (income.getSource().id().equals(SALES_INCOME_SOURCE_ID) &&
+                        income.getIncomeDate().equals(sale.getSaleDate()) &&
+                        income.getTotalAmount().equals(sale.getTotalAmount())) {
+
+                    boolean deleted = incomeService.deleteIncome(income.getId());
+
+                    if (deleted) {
+                        LoggerUtil.info("Удален доход на основе продажи с ID " + sale.getId());
+
+                        updateMonthlyBudget(sale.getSaleDate().toLocalDateTime().toLocalDate(), sale.getTotalAmount().negate());
+                    }
+
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при удалении дохода от продажи: " + e.getMessage(), e);
+        }
     }
 
-    @Override
-    public BigDecimal getDailySalesAverage(LocalDate startDate, LocalDate endDate) {
-        checkAuthentication();
-        validateDateRange(startDate, endDate);
+    private void updateMonthlyBudget(LocalDate date, BigDecimal amount) {
+        try {
+            LocalDate firstDayOfMonth = date.withDayOfMonth(1);
 
-        BigDecimal totalAmount = getTotalSalesAmount(startDate, endDate);
+            MonthlyBudget budget;
+            try {
+                budget = budgetService.getBudgetByDate(firstDayOfMonth);
+            } catch (Exception e) {
+                LoggerUtil.info("Создание нового месячного бюджета на " + firstDayOfMonth);
 
-        long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+                budget = new MonthlyBudget(
+                        null,
+                        firstDayOfMonth,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        null,
+                        null,
+                        userService.getCurrentUser()
+                );
 
-        return totalAmount.divide(BigDecimal.valueOf(days), 2, RoundingMode.HALF_UP);
+                Long budgetId = budgetService.createBudget(budget);
+                if (budgetId != null) {
+                    budget.setId(budgetId);
+                } else {
+                    throw new RuntimeException("Не удалось создать месячный бюджет");
+                }
+            }
+
+            BigDecimal newActualIncome = budget.getActualIncome().add(amount);
+
+            budgetService.updateActualValues(budget.getId(), newActualIncome, budget.getActualExpenses());
+
+            LoggerUtil.info("Обновлен месячный бюджет на " + firstDayOfMonth +
+                    ", новый фактический доход: " + newActualIncome);
+
+        } catch (Exception e) {
+            LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+        }
     }
 
     private Map<Product, Integer> groupProductsByQuantity(List<Sale> sales, int limit) {
@@ -260,24 +311,6 @@ public class SaleServiceImpl implements SaleService {
         return productQuantities.entrySet().stream()
                 .sorted(Map.Entry.<Product, Integer>comparingByValue().reversed())
                 .limit(limit)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
-    }
-
-    private Map<User, BigDecimal> groupSalesByCashier(List<Sale> sales) {
-        Map<User, BigDecimal> cashierSales = new HashMap<>();
-        for (Sale sale : sales) {
-            User cashier = sale.getCashier();
-            BigDecimal currentAmount = cashierSales.getOrDefault(cashier, BigDecimal.ZERO);
-            cashierSales.put(cashier, currentAmount.add(sale.getTotalAmount()));
-        }
-
-        return cashierSales.entrySet().stream()
-                .sorted(Map.Entry.<User, BigDecimal>comparingByValue().reversed())
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
@@ -310,8 +343,7 @@ public class SaleServiceImpl implements SaleService {
 
         if (productChanged) {
             handleProductChange(existingSale, updatedSale);
-        }
-        else {
+        } else {
             handleQuantityChange(existingSale.getProduct().getId(),
                     existingSale.getQuantity(), updatedSale.getQuantity());
         }
@@ -436,19 +468,5 @@ public class SaleServiceImpl implements SaleService {
         }
 
         return sales;
-    }
-
-    private void checkAuthentication() {
-        if (!userService.isAuthenticated()) {
-            throw new AuthenticationException("Пользователь не авторизован");
-        }
-    }
-
-    private void checkCashierPermission() {
-        checkAuthentication();
-
-        if (!userService.hasRole(ROLE_CASHIER, ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только кассир или директор может управлять продажами");
-        }
     }
 }

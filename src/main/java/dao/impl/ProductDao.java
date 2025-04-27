@@ -66,7 +66,7 @@ public class ProductDao extends Dao<Product> {
                     "VALUES (?, ?, ?, ?, ?, ?)";
             Long id = insert(sql,
                     product.getName(),
-                    product.getCategory().getId(),
+                    product.getCategory().id(),
                     product.getBuyPrice(),
                     product.getSellPrice(),
                     product.getCreatedAt() != null ? product.getCreatedAt() : now,
@@ -89,7 +89,7 @@ public class ProductDao extends Dao<Product> {
                 "SELL_PRICE = ?, UPDATED_AT = ? WHERE ID = ?";
         return update(sql,
                 product.getName(),
-                product.getCategory().getId(),
+                product.getCategory().id(),
                 product.getBuyPrice(),
                 product.getSellPrice(),
                 now,

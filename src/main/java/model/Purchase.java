@@ -22,13 +22,17 @@ public class Purchase implements FormattableEntity {
     private static final int DATE_WIDTH = 20;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    public Purchase(Long id, Product product, Integer quantity, User stockKeeper, Timestamp purchaseDate, BigDecimal totalCost) {
-        this.id = id;
+    public Purchase(Product product, Integer quantity, BigDecimal totalCost) {
         this.product = product;
         this.quantity = quantity;
+        this.totalCost = totalCost;
+    }
+
+    public Purchase(Long id, Product product, Integer quantity, User stockKeeper, Timestamp purchaseDate, BigDecimal totalCost) {
+        this(product, quantity, totalCost);
+        this.id = id;
         this.stockKeeper = stockKeeper;
         this.purchaseDate = purchaseDate;
-        this.totalCost = totalCost;
     }
 
     @Override

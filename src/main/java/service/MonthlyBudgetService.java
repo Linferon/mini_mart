@@ -1,12 +1,8 @@
-package service.impl;
+package service;
 
 import dao.impl.MonthlyBudgetDao;
-import exception.AuthenticationException;
-import exception.AuthorizationException;
 import exception.nsee.BudgetNotFoundException;
 import model.MonthlyBudget;
-import service.interfaces.MonthlyBudgetService;
-import service.interfaces.UserService;
 import util.LoggerUtil;
 
 import java.math.BigDecimal;
@@ -17,36 +13,39 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
+public class MonthlyBudgetService {
+    private static MonthlyBudgetService instance;
     private final MonthlyBudgetDao budgetDao = new MonthlyBudgetDao();
-    private final UserService userService = new UserServiceImpl();
+    private final UserService userService = UserService.getInstance();
 
-    private static final String ROLE_DIRECTOR = "Директор";
-    private static final String ROLE_ACCOUNTANT = "Бухгалтер";
+    private MonthlyBudgetService() {
+    }
 
-    @Override
+    public static synchronized MonthlyBudgetService getInstance() {
+        if (instance == null) {
+            instance = new MonthlyBudgetService();
+        }
+        return instance;
+    }
+
     public List<MonthlyBudget> getAllBudgets() {
-        checkAuthentication();
         return findAndValidate(budgetDao::findAll, "Бюджеты не найдены");
     }
 
-    @Override
+
     public MonthlyBudget getBudgetById(Long id) {
-        checkAuthentication();
         return budgetDao.findById(id)
                 .orElseThrow(() -> new BudgetNotFoundException("Бюджет с ID " + id + " не найден"));
     }
 
-    @Override
+
     public MonthlyBudget getBudgetByDate(LocalDate date) {
-        checkAuthentication();
         return budgetDao.findByDate(Date.valueOf(date))
                 .orElseThrow(() -> new BudgetNotFoundException("Не было найдено записей на эту дату!"));
     }
 
-    @Override
+
     public List<MonthlyBudget> getBudgetsByDateRange(LocalDate startDate, LocalDate endDate) {
-        checkAuthentication();
         validateDateRange(startDate, endDate);
 
         return findAndValidate(
@@ -55,26 +54,14 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         );
     }
 
-    @Override
-    public List<MonthlyBudget> getBudgetsByDirector(Long directorId) {
-        checkAuthentication();
-        userService.getUserById(directorId);
-
-        return findAndValidate(
-                () -> budgetDao.findByDirector(directorId),
-                "Бюджеты, созданные директором с ID " + directorId + " не найдены"
-        );
-    }
-
-    @Override
     public Long createBudget(MonthlyBudget budget) {
-        checkDirectorPermission();
         validateBudget(budget);
 
         try {
             getBudgetByDate(budget.getBudgetDate());
             throw new IllegalArgumentException("Бюджет на " + budget.getBudgetDate() + " уже существует");
-        } catch (BudgetNotFoundException ignored) {}
+        } catch (BudgetNotFoundException ignored) {
+        }
 
         setupBudget(budget);
 
@@ -86,10 +73,8 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         return id;
     }
 
-    @Override
-    public Long createBudget(LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses) {
-        checkDirectorPermission();
 
+    public Long createBudget(LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses) {
         if (budgetDate == null) {
             throw new IllegalArgumentException("Дата бюджета должна быть указана");
         }
@@ -104,7 +89,7 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
                 plannedExpenses,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                plannedIncome.subtract(plannedExpenses),
+                BigDecimal.ZERO,
                 null,
                 null,
                 userService.getCurrentUser()
@@ -113,10 +98,8 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         return createBudget(budget);
     }
 
-    @Override
-    public boolean updateBudget(MonthlyBudget budget) {
-        checkDirectorPermission();
 
+    public boolean updateBudget(MonthlyBudget budget) {
         if (budget.getId() == null) {
             throw new IllegalArgumentException("ID бюджета не может быть пустым при обновлении");
         }
@@ -130,9 +113,8 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
             if (!existingBudget.getId().equals(budget.getId())) {
                 throw new IllegalArgumentException("Бюджет на " + budget.getBudgetDate() + " уже существует");
             }
-        } catch (BudgetNotFoundException ignored) {}
-
-        calculateNetResult(budget);
+        } catch (BudgetNotFoundException ignored) {
+        }
 
         boolean updated = budgetDao.update(budget);
         if (updated) {
@@ -144,17 +126,13 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         return updated;
     }
 
-    @Override
     public boolean updateActualValues(Long budgetId, BigDecimal actualIncome, BigDecimal actualExpenses) {
-        checkAccountantPermission();
-
         validatePositiveAmount(actualIncome, "Фактический доход");
         validatePositiveAmount(actualExpenses, "Фактические расходы");
 
         MonthlyBudget budget = getBudgetById(budgetId);
         budget.setActualIncome(actualIncome);
         budget.setActualExpenses(actualExpenses);
-        calculateNetResult(budget);
 
         boolean updated = budgetDao.update(budget);
         if (updated) {
@@ -168,10 +146,7 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         return updated;
     }
 
-    @Override
     public boolean deleteBudget(Long id) {
-        checkDirectorPermission();
-
         MonthlyBudget budget = getBudgetById(id);
 
         boolean deleted = budgetDao.deleteById(id);
@@ -184,41 +159,33 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         return deleted;
     }
 
-    @Override
     public BigDecimal getTotalPlannedIncome(LocalDate startDate, LocalDate endDate) {
         return sumBudgetProperty(startDate, endDate, MonthlyBudget::getPlannedIncome);
     }
 
-    @Override
+
     public BigDecimal getTotalPlannedExpenses(LocalDate startDate, LocalDate endDate) {
         return sumBudgetProperty(startDate, endDate, MonthlyBudget::getPlannedExpenses);
     }
 
-    @Override
+
     public BigDecimal getTotalActualIncome(LocalDate startDate, LocalDate endDate) {
         return sumBudgetProperty(startDate, endDate, MonthlyBudget::getActualIncome);
     }
 
-    @Override
+
     public BigDecimal getTotalActualExpenses(LocalDate startDate, LocalDate endDate) {
         return sumBudgetProperty(startDate, endDate, MonthlyBudget::getActualExpenses);
     }
 
-    @Override
-    public BigDecimal getTotalNetResult(LocalDate startDate, LocalDate endDate) {
-        return sumBudgetProperty(startDate, endDate, MonthlyBudget::getNetResult);
-    }
-
-    @Override
-    public double getAvgBudgetExecutionRate(LocalDate startDate, LocalDate endDate) {
-        checkAuthentication();
+    public BigDecimal getAvgBudgetExecutionRate(LocalDate startDate, LocalDate endDate) {
         validateDateRange(startDate, endDate);
 
         List<MonthlyBudget> budgets;
         try {
             budgets = getBudgetsByDateRange(startDate, endDate);
         } catch (BudgetNotFoundException e) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
 
         List<MonthlyBudget> validBudgets = budgets.stream()
@@ -226,16 +193,15 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
                 .toList();
 
         if (validBudgets.isEmpty()) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
 
         double totalExecutionRate = validBudgets.stream()
                 .mapToDouble(b -> calculateExecutionRate(b).doubleValue())
                 .sum();
 
-        return totalExecutionRate / validBudgets.size();
+        return BigDecimal.valueOf(totalExecutionRate / validBudgets.size());
     }
-
 
     private void validateBudget(MonthlyBudget budget) {
         if (budget.getBudgetDate() == null) {
@@ -294,13 +260,6 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
             budget.setActualExpenses(BigDecimal.ZERO);
         }
 
-        calculateNetResult(budget);
-    }
-
-    private void calculateNetResult(MonthlyBudget budget) {
-        BigDecimal income = budget.getActualIncome() != null ? budget.getActualIncome() : BigDecimal.ZERO;
-        BigDecimal expenses = budget.getActualExpenses() != null ? budget.getActualExpenses() : BigDecimal.ZERO;
-        budget.setNetResult(income.subtract(expenses));
     }
 
     private BigDecimal calculateExecutionRate(MonthlyBudget budget) {
@@ -311,7 +270,6 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
 
     private BigDecimal sumBudgetProperty(LocalDate startDate, LocalDate endDate,
                                          java.util.function.Function<MonthlyBudget, BigDecimal> propertyExtractor) {
-        checkAuthentication();
         validateDateRange(startDate, endDate);
 
         List<MonthlyBudget> budgets;
@@ -335,27 +293,5 @@ public class MonthlyBudgetServiceImpl implements MonthlyBudgetService {
         }
 
         return budgets;
-    }
-
-    private void checkAuthentication() {
-        if (!userService.isAuthenticated()) {
-            throw new AuthenticationException("Пользователь не авторизован");
-        }
-    }
-
-    private void checkDirectorPermission() {
-        checkAuthentication();
-
-        if (!userService.hasRole(ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только директор может управлять бюджетами");
-        }
-    }
-
-    private void checkAccountantPermission() {
-        checkAuthentication();
-
-        if (!userService.hasRole(ROLE_ACCOUNTANT, ROLE_DIRECTOR)) {
-            throw new AuthorizationException("Только бухгалтер или директор может обновлять фактические значения бюджетов");
-        }
     }
 }
