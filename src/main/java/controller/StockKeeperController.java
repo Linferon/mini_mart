@@ -1,4 +1,4 @@
-package ui;
+package controller;
 
 import exception.nsee.ProductNotFoundException;
 import model.*;
@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
-public class StockKeeperUI extends BaseUI {
+public class StockKeeperController extends BaseController {
     private final ProductService productService = ProductService.getInstance();
     private final ProductCategoryService categoryService = ProductCategoryService.getInstance();
     private final StockService stockService = StockService.getInstance();

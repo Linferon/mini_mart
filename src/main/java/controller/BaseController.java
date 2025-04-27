@@ -1,4 +1,4 @@
-package ui;
+package controller;
 
 import util.ConsoleUtil;
 import util.DateTimeUtils;
@@ -8,7 +8,7 @@ import util.MenuBuilder;
 
 import java.time.LocalDate;
 
-public abstract class BaseUI {
+public abstract class BaseController {
 
     public abstract void showMenu();
 

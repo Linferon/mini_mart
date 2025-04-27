@@ -1,13 +1,13 @@
-package ui;
+package controller;
 
 import service.UserService;
 import util.ConsoleUtil;
 import util.InputHandler;
 
-public class AuthenticationUI {
+public class AuthController {
     private final UserService userService;
 
-    public AuthenticationUI() {
+    public AuthController() {
         this.userService = UserService.getInstance();
     }
 

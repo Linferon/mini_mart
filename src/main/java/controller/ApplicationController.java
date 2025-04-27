@@ -3,7 +3,6 @@ package controller;
 import model.Role;
 import model.User;
 import service.UserService;
-import ui.*;
 import migration.LiquibaseMigrator;
 import util.DatabaseConnection;
 import util.LoggerUtil;
@@ -15,12 +14,12 @@ import java.time.format.DateTimeFormatter;
 
 public class ApplicationController {
     private final UserService userService;
-    private final AuthenticationUI authUI;
+    private final AuthController authUI;
     private final DateTimeFormatter dateTimeFormatter;
 
     public ApplicationController() {
         this.userService = UserService.getInstance();
-        this.authUI = new AuthenticationUI();
+        this.authUI = new AuthController();
         this.dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
     }
 
@@ -85,7 +84,7 @@ public class ApplicationController {
     }
 
     private void processUserInterface(User user) {
-        BaseUI ui = getUIForRole(user.getRole());
+        BaseController ui = getUIForRole(user.getRole());
         if (ui != null) {
             ui.showMenu();
         }
@@ -117,14 +116,14 @@ public class ApplicationController {
         LoggerUtil.close();
     }
 
-    private BaseUI getUIForRole(Role role) {
+    private BaseController getUIForRole(Role role) {
         String roleName = role.getName();
 
         return switch (roleName) {
-            case "Директор" -> new DirectorUI();
-            case "Бухгалтер" -> new AccountantUI();
-            case "Кладовщик" -> new StockKeeperUI();
-            case "Кассир" -> new CashierUI();
+            case "Директор" -> new DirectorController();
+            case "Бухгалтер" -> new AccountantController();
+            case "Кладовщик" -> new StockKeeperController();
+            case "Кассир" -> new CashierController();
             default -> {
                 handleUnknownRole(roleName);
                 yield null;
