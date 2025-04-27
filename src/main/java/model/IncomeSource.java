@@ -2,17 +2,9 @@ package model;
 
 import util.TableFormatter;
 
-public class IncomeSource implements FormattableEntity {
-    private Long id;
-    private String name;
-
+public record IncomeSource(Long id, String name) implements FormattableEntity {
     private static final int ID_WIDTH = 5;
     private static final int NAME_WIDTH = 40;
-
-    public IncomeSource(Long id, String name) {
-        this.id = id;
-        this.name = name;
-    }
 
     @Override
     public String toString() {
@@ -34,21 +26,5 @@ public class IncomeSource implements FormattableEntity {
     @Override
     public String getTableDivider() {
         return TableFormatter.createDivider(ID_WIDTH, NAME_WIDTH);
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 }
