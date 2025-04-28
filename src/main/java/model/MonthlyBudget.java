@@ -25,19 +25,23 @@ public class MonthlyBudget implements FormattableEntity {
     private static final int DIRECTOR_WIDTH = 20;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public MonthlyBudget(Long id, LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses,
-                         BigDecimal actualIncome, BigDecimal actualExpenses, BigDecimal netResult,
-                         Timestamp createdAt, Timestamp updatedAt, User director) {
-        this.id = id;
+    public MonthlyBudget(LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses, User  director) {
         this.budgetDate = budgetDate;
         this.plannedIncome = plannedIncome;
         this.plannedExpenses = plannedExpenses;
+        this.director = director;
+    }
+
+    public MonthlyBudget(Long id, LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses,
+                         BigDecimal actualIncome, BigDecimal actualExpenses, BigDecimal netResult,
+                         Timestamp createdAt, Timestamp updatedAt, User director) {
+        this(budgetDate, plannedIncome, plannedExpenses, director);
+        this.id = id;
         this.actualIncome = actualIncome;
         this.actualExpenses = actualExpenses;
         this.netResult = netResult;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.director = director;
     }
 
     @Override
@@ -136,10 +140,6 @@ public class MonthlyBudget implements FormattableEntity {
 
     public BigDecimal getNetResult() {
         return netResult;
-    }
-
-    public void setNetResult(BigDecimal netResult) {
-        this.netResult = netResult;
     }
 
     public Timestamp getCreatedAt() {
