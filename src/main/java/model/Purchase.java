@@ -12,7 +12,7 @@ public class Purchase implements FormattableEntity {
     private Integer quantity;
     private User stockKeeper;
     private Timestamp purchaseDate;
-    private BigDecimal totalCost;
+    private final BigDecimal totalCost;
 
     private static final int ID_WIDTH = 5;
     private static final int PRODUCT_WIDTH = 30;
@@ -118,9 +118,5 @@ public class Purchase implements FormattableEntity {
 
     public BigDecimal getTotalCost() {
         return totalCost;
-    }
-
-    public void setTotalCost(BigDecimal totalCost) {
-        this.totalCost = totalCost;
     }
 }

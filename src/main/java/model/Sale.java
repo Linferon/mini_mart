@@ -3,7 +3,6 @@ package model;
 import util.TableFormatter;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 
@@ -66,13 +65,6 @@ public class Sale implements FormattableEntity {
     @Override
     public String getTableDivider() {
         return TableFormatter.createDivider(ID_WIDTH, PRODUCT_WIDTH, QUANTITY_WIDTH, AMOUNT_WIDTH, CASHIER_WIDTH, DATE_WIDTH);
-    }
-
-    public BigDecimal getUnitPrice() {
-        if (totalAmount != null && quantity != null && quantity > 0) {
-            return totalAmount.divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP);
-        }
-        return BigDecimal.ZERO;
     }
 
     public String getFormattedSaleDate() {

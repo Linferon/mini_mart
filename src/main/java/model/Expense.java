@@ -25,9 +25,10 @@ public class Expense implements FormattableEntity {
         this.totalAmount = totalAmount;
     }
 
-    public Expense(ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate) {
+    public Expense(ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate, User accountant) {
         this(category, totalAmount);
         this.expenseDate = expenseDate;
+        this.accountant = accountant;
     }
 
     public Expense(Long id, ExpenseCategory category, BigDecimal totalAmount, Timestamp expenseDate, User accountant) {

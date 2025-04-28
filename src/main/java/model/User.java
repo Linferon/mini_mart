@@ -45,7 +45,7 @@ public class User implements FormattableEntity {
                 "\nимя: " + name +
                 "\nфамилия: " + surname +
                 "\nemail: " + email +
-                "\nроль: " + (role != null ? role.getName() : "не указана");
+                "\nроль: " + (role != null ? role.name() : "не указана");
     }
 
     @Override
@@ -64,7 +64,7 @@ public class User implements FormattableEntity {
                 TableFormatter.formatCell(name, NAME_WIDTH) +
                 TableFormatter.formatCell(surname, SURNAME_WIDTH) +
                 TableFormatter.formatCell(email, EMAIL_WIDTH) +
-                TableFormatter.formatCell(role != null ? role.getName() : "-", ROLE_WIDTH) +
+                TableFormatter.formatCell(role != null ? role.name() : "-", ROLE_WIDTH) +
                 TableFormatter.formatCell(Boolean.TRUE.equals(enabled) ? "Активен" : "Уволен", ENABLED_WIDTH);
     }
 
@@ -121,10 +121,6 @@ public class User implements FormattableEntity {
         this.enabled = enabled;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
     public Role getRole() {
         return role;
     }
@@ -137,15 +133,7 @@ public class User implements FormattableEntity {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public Timestamp getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

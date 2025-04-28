@@ -9,15 +9,15 @@ import java.time.format.DateTimeFormatter;
 
 public class Payroll implements FormattableEntity {
     private Long id;
-    private User employee;
+    private final User employee;
     private User accountant;
-    private Float hoursWorked;
-    private BigDecimal hourlyRate;
+    private final Float hoursWorked;
+    private final BigDecimal hourlyRate;
     private BigDecimal totalAmount;
-    private LocalDate periodStart;
-    private LocalDate periodEnd;
-    private LocalDate paymentDate;
-    private Boolean isPaid;
+    private final LocalDate periodStart;
+    private final LocalDate periodEnd;
+    private final LocalDate paymentDate;
+    private final Boolean isPaid;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -110,10 +110,6 @@ public class Payroll implements FormattableEntity {
         return employee;
     }
 
-    public void setEmployee(User employee) {
-        this.employee = employee;
-    }
-
     public User getAccountant() {
         return accountant;
     }
@@ -126,16 +122,8 @@ public class Payroll implements FormattableEntity {
         return hoursWorked;
     }
 
-    public void setHoursWorked(Float hoursWorked) {
-        this.hoursWorked = hoursWorked;
-    }
-
     public BigDecimal getHourlyRate() {
         return hourlyRate;
-    }
-
-    public void setHourlyRate(BigDecimal hourlyRate) {
-        this.hourlyRate = hourlyRate;
     }
 
     public BigDecimal getTotalAmount() {
@@ -150,32 +138,16 @@ public class Payroll implements FormattableEntity {
         return periodStart;
     }
 
-    public void setPeriodStart(LocalDate periodStart) {
-        this.periodStart = periodStart;
-    }
-
     public LocalDate getPeriodEnd() {
         return periodEnd;
-    }
-
-    public void setPeriodEnd(LocalDate periodEnd) {
-        this.periodEnd = periodEnd;
     }
 
     public LocalDate getPaymentDate() {
         return paymentDate;
     }
 
-    public void setPaymentDate(LocalDate paymentDate) {
-        this.paymentDate = paymentDate;
-    }
-
     public Boolean isPaid() {
         return isPaid;
-    }
-
-    public void setPaid(Boolean paid) {
-        isPaid = paid;
     }
 
     public Timestamp getCreatedAt() {

@@ -2,17 +2,10 @@ package model;
 
 import util.TableFormatter;
 
-public class Role implements FormattableEntity {
-    private Long id;
-    private String name;
+public record Role(Long id, String name) implements FormattableEntity {
 
     private static final int ID_WIDTH = 5;
     private static final int NAME_WIDTH = 30;
-
-    public Role(Long id, String name) {
-        this.id = id;
-        this.name = name;
-    }
 
     @Override
     public String toString() {
@@ -34,21 +27,5 @@ public class Role implements FormattableEntity {
     @Override
     public String getTableDivider() {
         return TableFormatter.createDivider(ID_WIDTH, NAME_WIDTH);
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 }
