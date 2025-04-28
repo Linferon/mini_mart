@@ -3,11 +3,12 @@ package dao.mapper;
 import exception.DatabaseMapException;
 import model.Role;
 import model.User;
-import util.LoggerUtil;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+
+import static util.LoggerUtil.error;
 
 public class UserMapper {
     private UserMapper() {
@@ -31,7 +32,7 @@ public class UserMapper {
 
             return new User(id, name, surname, email, password, enabled, role, createdAt, updatedAt);
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping user from ResultSet", e);
+            error("Error mapping user from ResultSet", e);
             throw new DatabaseMapException("Error mapping user");
         }
     }

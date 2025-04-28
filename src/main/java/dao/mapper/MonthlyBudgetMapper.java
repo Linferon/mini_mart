@@ -3,13 +3,14 @@ package dao.mapper;
 import exception.DatabaseMapException;
 import model.MonthlyBudget;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+
+import static util.LoggerUtil.error;
 
 public class MonthlyBudgetMapper {
     private MonthlyBudgetMapper() {
@@ -54,7 +55,7 @@ public class MonthlyBudgetMapper {
                     director
             );
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping monthly budget from ResultSet", e);
+            error("Error mapping monthly budget from ResultSet", e);
             throw new DatabaseMapException("Error mapping monthly budget");
         }
     }

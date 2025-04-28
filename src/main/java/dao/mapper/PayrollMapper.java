@@ -3,13 +3,14 @@ package dao.mapper;
 import exception.DatabaseMapException;
 import model.Payroll;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+
+import static util.LoggerUtil.error;
 
 public class PayrollMapper {
     private PayrollMapper() {}
@@ -78,7 +79,7 @@ public class PayrollMapper {
                     updatedAt
             );
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping payroll from ResultSet", e);
+            error("Error mapping payroll from ResultSet", e);
             throw new DatabaseMapException("Error mapping payroll");
         }
     }

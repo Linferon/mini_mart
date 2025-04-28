@@ -4,12 +4,13 @@ import exception.DatabaseMapException;
 import model.Expense;
 import model.ExpenseCategory;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+
+import static util.LoggerUtil.error;
 
 public class ExpenseMapper {
     private ExpenseMapper() {}
@@ -40,7 +41,7 @@ public class ExpenseMapper {
 
             return new Expense(id, category, totalAmount, expenseDate, accountant);
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping expense from ResultSet", e);
+            error("Error mapping expense from ResultSet", e);
             throw new DatabaseMapException("Error mapping expense");
         }
     }

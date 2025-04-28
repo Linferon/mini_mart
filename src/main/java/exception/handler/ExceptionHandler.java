@@ -1,6 +1,6 @@
 package exception.handler;
 
-import util.ConsoleUtil;
+import static util.ConsoleUtil.println;
 
 public class ExceptionHandler {
     private ExceptionHandler() {}
@@ -9,7 +9,7 @@ public class ExceptionHandler {
         try {
             action.run();
         } catch (Exception e) {
-            ConsoleUtil.println(e.getMessage());
+            println(e.getMessage());
         }
     }
 }

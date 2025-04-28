@@ -4,12 +4,13 @@ import exception.DatabaseMapException;
 import model.Product;
 import model.Purchase;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+
+import static util.LoggerUtil.error;
 
 public class PurchaseMapper {
     private PurchaseMapper() {
@@ -42,7 +43,7 @@ public class PurchaseMapper {
 
             return new Purchase(id, product, quantity, stockKeeper, purchaseDate, totalCost);
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping purchase from ResultSet", e);
+            error("Error mapping purchase from ResultSet", e);
             throw new DatabaseMapException("Error mapping purchase");
         }
     }

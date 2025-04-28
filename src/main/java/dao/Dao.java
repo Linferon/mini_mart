@@ -1,13 +1,14 @@
 package dao;
 
 import util.DatabaseConnection;
-import util.LoggerUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+
+import static util.LoggerUtil.error;
 
 public abstract class Dao<T> {
 
@@ -29,7 +30,7 @@ public abstract class Dao<T> {
                 }
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Ошибка при выполнении запроса: " + sql, e);
+            error("Ошибка при выполнении запроса: " + sql, e);
         }
 
         return Optional.empty();
@@ -47,7 +48,7 @@ public abstract class Dao<T> {
                 }
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Ошибка при выполнении запроса: " + sql, e);
+            error("Ошибка при выполнении запроса: " + sql, e);
         }
 
         return result;
@@ -71,7 +72,7 @@ public abstract class Dao<T> {
                 }
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Ошибка при выполнении вставки: " + sql, e);
+            error("Ошибка при выполнении вставки: " + sql, e);
         }
 
         return null;
@@ -84,7 +85,7 @@ public abstract class Dao<T> {
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
-            LoggerUtil.error("Ошибка при обновлении: " + sql, e);
+            error("Ошибка при обновлении: " + sql, e);
             return false;
         }
     }

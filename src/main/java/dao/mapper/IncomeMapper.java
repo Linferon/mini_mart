@@ -4,12 +4,13 @@ import exception.DatabaseMapException;
 import model.Income;
 import model.IncomeSource;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+
+import static util.LoggerUtil.error;
 
 public class IncomeMapper {
     private IncomeMapper() {
@@ -41,7 +42,7 @@ public class IncomeMapper {
 
             return new Income(id, source, totalAmount, incomeDate, accountant);
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping income from ResultSet", e);
+            error("Error mapping income from ResultSet", e);
             throw new DatabaseMapException("Error mapping income");
         }
     }

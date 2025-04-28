@@ -3,6 +3,10 @@ package util;
 import java.util.ArrayList;
 import java.util.List;
 
+import static util.ConsoleUtil.println;
+import static util.InputHandler.getIntInput;
+import static util.LoggerUtil.error;
+
 public class MenuBuilder {
     
     private final String title;
@@ -27,13 +31,13 @@ public class MenuBuilder {
         boolean running = true;
         
         while (running) {
-            ConsoleUtil.println("\n=== " + title + " ===");
+            println("\n=== " + title + " ===");
             
             for (int i = 0; i < menuItems.size(); i++) {
-                ConsoleUtil.println((i + 1) + ". " + menuItems.get(i).label());
+                println((i + 1) + ". " + menuItems.get(i).label());
             }
             
-            int choice = InputHandler.getIntInput("Выберите действие: ");
+            int choice = getIntInput("Выберите действие: ");
             
             if (choice >= 1 && choice <= menuItems.size()) {
                 MenuItem selectedItem = menuItems.get(choice - 1);
@@ -44,11 +48,11 @@ public class MenuBuilder {
                     try {
                         selectedItem.action().run();
                     } catch (Exception e) {
-                        LoggerUtil.error(e.getMessage());
+                        error(e.getMessage());
                     }
                 }
             } else {
-                ConsoleUtil.println("Неверный выбор. Попробуйте снова.");
+                println("Неверный выбор. Попробуйте снова.");
             }
         }
     }

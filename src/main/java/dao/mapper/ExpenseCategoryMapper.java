@@ -2,10 +2,11 @@ package dao.mapper;
 
 import exception.DatabaseMapException;
 import model.ExpenseCategory;
-import util.LoggerUtil;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import static util.LoggerUtil.error;
 
 public class ExpenseCategoryMapper {
     private ExpenseCategoryMapper() {}
@@ -17,7 +18,7 @@ public class ExpenseCategoryMapper {
                     rs.getString("NAME")
             );
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping role from ResultSet", e);
+            error("Error mapping role from ResultSet", e);
             throw new DatabaseMapException("Error mapping role");
         }
     }

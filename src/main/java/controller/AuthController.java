@@ -1,8 +1,10 @@
 package controller;
 
 import service.UserService;
-import util.ConsoleUtil;
-import util.InputHandler;
+
+import static util.ConsoleUtil.printHeader;
+import static util.ConsoleUtil.println;
+import static util.InputHandler.getStringInput;
 
 public class AuthController {
     private final UserService userService;
@@ -12,16 +14,16 @@ public class AuthController {
     }
 
     public boolean authenticate() {
-        ConsoleUtil.printHeader("Система Авторизации");
+        printHeader("Система Авторизации");
 
-        String email = InputHandler.getStringInput("Введите email: ");
-        String password = InputHandler.getStringInput("Введите пароль: ");
+        String email = getStringInput("Введите email: ");
+        String password = getStringInput("Введите пароль: ");
 
         return userService.authenticate(email, password);
     }
 
     public void logout() {
         userService.logout();
-        ConsoleUtil.println("Вы успешно вышли из системы.");
+        println("Вы успешно вышли из системы.");
     }
 }

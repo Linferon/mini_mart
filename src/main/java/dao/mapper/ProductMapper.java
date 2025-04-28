@@ -3,12 +3,13 @@ package dao.mapper;
 import exception.DatabaseMapException;
 import model.Product;
 import model.ProductCategory;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+
+import static util.LoggerUtil.error;
 
 public class ProductMapper {
     private ProductMapper() {}
@@ -29,7 +30,7 @@ public class ProductMapper {
 
             return new Product(id, name, category, buyPrice, sellPrice, createdAt, updatedAt);
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping product from ResultSet", e);
+            error("Error mapping product from ResultSet", e);
             throw new DatabaseMapException("Error mapping product");
         }
     }

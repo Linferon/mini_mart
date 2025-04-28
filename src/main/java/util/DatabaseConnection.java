@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import static util.LoggerUtil.error;
+
 public class DatabaseConnection {
     private DatabaseConnection() {}
     private static final String URL = "jdbc:h2:./db/mini-mart;AUTO_SERVER=TRUE";
@@ -25,7 +27,7 @@ public class DatabaseConnection {
                 connection.close();
             }
         } catch (SQLException e) {
-            LoggerUtil.error("Error closing database connection: " + e.getMessage());
+            error("Error closing database connection: " + e.getMessage());
         }
     }
 }

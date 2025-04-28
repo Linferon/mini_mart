@@ -5,22 +5,20 @@ import model.User;
 import service.UserService;
 import migration.LiquibaseMigrator;
 import util.DatabaseConnection;
-import util.LoggerUtil;
-import util.ConsoleUtil;
-import util.InputHandler;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import static util.ConsoleUtil.printHeader;
+import static util.ConsoleUtil.println;
+import static util.InputHandler.closeScanner;
+import static util.InputHandler.getStringInput;
+import static util.LoggerUtil.*;
 
 public class ApplicationController {
     private final UserService userService;
     private final AuthController authUI;
-    private final DateTimeFormatter dateTimeFormatter;
 
     public ApplicationController() {
         this.userService = UserService.getInstance();
         this.authUI = new AuthController();
-        this.dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
     }
 
     public void run() {
@@ -44,12 +42,7 @@ public class ApplicationController {
                 continue;
             }
 
-            User currentUser = retrieveCurrentUser();
-
-            if (currentUser == null) {
-                continue;
-            }
-
+            User currentUser = userService.getCurrentUser();
             displayWelcomeMessage(currentUser);
             processUserInterface(currentUser);
             authUI.logout();
@@ -63,61 +56,27 @@ public class ApplicationController {
 
     private boolean performAuthentication() {
         if (!authUI.authenticate()) {
-            LoggerUtil.error("Ошибка авторизации. Попробуйте снова.");
+            error("Ошибка авторизации. Попробуйте снова.");
             return false;
         }
         return true;
     }
 
-    private User retrieveCurrentUser() {
-        User currentUser = userService.getCurrentUser();
-        if (currentUser == null) {
-            LoggerUtil.error("Не удалось получить данные текущего пользователя");
-        }
-        return currentUser;
-    }
-
     private void displayWelcomeMessage(User user) {
-        ConsoleUtil.printHeader("Добро пожаловать, " +
+        printHeader("Добро пожаловать, " +
                 user.getName() + " " + user.getSurname() +
-                " (" + user.getRole().getName() + ")");
+                " (" + user.getRole().name() + ")");
     }
 
     private void processUserInterface(User user) {
         BaseController ui = getUIForRole(user.getRole());
-        if (ui != null) {
-            ui.showMenu();
-        }
-    }
 
-    private boolean shouldExitApplication() {
-        String continueChoice;
-        do {
-            continueChoice = InputHandler.getStringInput("\nЖелаете продолжить работу? (да/нет): ");
-        } while (!continueChoice.equalsIgnoreCase("да") && !continueChoice.equalsIgnoreCase("нет"));
-
-        return continueChoice.equalsIgnoreCase("нет");
-    }
-
-    private void displayExitMessage() {
-        ConsoleUtil.printHeader("Завершение работы системы");
-        ConsoleUtil.println("Спасибо за использование системы управления предприятием!");
-        ConsoleUtil.println("Время завершения: " + LocalDateTime.now().format(dateTimeFormatter));
-    }
-
-    private void handleCriticalError(Exception e) {
-        LoggerUtil.error("Критическая ошибка приложения: " + e.getMessage());
-        e.printStackTrace();
-    }
-
-    private void cleanupResources() {
-        DatabaseConnection.closeConnection();
-        InputHandler.closeScanner();
-        LoggerUtil.close();
+        assert ui != null;
+        ui.showMenu();
     }
 
     private BaseController getUIForRole(Role role) {
-        String roleName = role.getName();
+        String roleName = role.name();
 
         return switch (roleName) {
             case "Директор" -> new DirectorController();
@@ -131,8 +90,32 @@ public class ApplicationController {
         };
     }
 
+    private boolean shouldExitApplication() {
+        while (true) {
+            String input = getStringInput("\nЖелаете продолжить работу? (да/нет): ").trim().toLowerCase();
+            if (input.equals("да")) return false;
+            if (input.equals("нет")) return true;
+        }
+    }
+
+    private void displayExitMessage() {
+        printHeader("Завершение работы системы");
+        println("Спасибо за использование системы управления предприятием!");
+    }
+
+    private void handleCriticalError(Exception e) {
+        error("Критическая ошибка приложения: " + e.getMessage());
+        e.printStackTrace();
+    }
+
+    private void cleanupResources() {
+        DatabaseConnection.closeConnection();
+        closeScanner();
+        close();
+    }
+
     private void handleUnknownRole(String roleName) {
-        ConsoleUtil.println("Неизвестная роль: " + roleName + ". Доступ запрещен.");
-        LoggerUtil.warn("Попытка доступа с неизвестной ролью: " + roleName);
+        println("Неизвестная роль: " + roleName + ". Доступ запрещен.");
+        warn("Попытка доступа с неизвестной ролью: " + roleName);
     }
 }

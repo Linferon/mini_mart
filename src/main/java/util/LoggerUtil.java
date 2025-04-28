@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.logging.*;
 
+import static util.ConsoleUtil.print;
+import static util.ConsoleUtil.printError;
+
 public class LoggerUtil {
     private LoggerUtil() {}
     private static final Logger LOGGER = Logger.getLogger(LoggerUtil.class.getName());
@@ -38,12 +41,12 @@ public class LoggerUtil {
     }
 
     public static void warn(String message) {
-        ConsoleUtil.print(message);
+        print(message);
         LOGGER.warning(message);
     }
 
     public static void error(String message) {
-        ConsoleUtil.printError(message);
+        printError(message);
         LOGGER.severe(message);
     }
 

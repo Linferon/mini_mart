@@ -13,7 +13,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import util.DatabaseConnection;
-import util.LoggerUtil;
+
+import static util.LoggerUtil.error;
 
 public class LiquibaseMigrator {
     private LiquibaseMigrator() {
@@ -34,7 +35,7 @@ public class LiquibaseMigrator {
 
             liquibase.update(new Contexts(), new LabelExpression());
         } catch (Exception e) {
-            LoggerUtil.error("Error during database migration: " + e.getMessage());
+            error("Error during database migration: " + e.getMessage());
             e.printStackTrace();
         }
     }

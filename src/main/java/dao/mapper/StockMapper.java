@@ -3,11 +3,12 @@ package dao.mapper;
 import exception.DatabaseMapException;
 import model.Product;
 import model.Stock;
-import util.LoggerUtil;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+
+import static util.LoggerUtil.error;
 
 public class StockMapper {
     private StockMapper() {}
@@ -31,7 +32,7 @@ public class StockMapper {
                     updatedAt
             );
         } catch (SQLException e) {
-            LoggerUtil.error("Error mapping stock from ResultSet", e);
+            error("Error mapping stock from ResultSet", e);
             throw new DatabaseMapException("Error mapping stock");
         }
     }
