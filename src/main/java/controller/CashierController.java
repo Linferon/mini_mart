@@ -7,14 +7,18 @@ import service.StockService;
 import util.ConsoleUtil;
 import exception.handler.ExceptionHandler;
 import util.InputHandler;
-import util.TableFormatter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class CashierController extends BaseController {
-    private final StockService stockService = StockService.getInstance();
-    private final SaleService saleService = SaleService.getInstance();
+    private final StockService stockService;
+    private final SaleService saleService;
+
+    public CashierController() {
+        stockService = StockService.getInstance();
+        saleService = SaleService.getInstance();
+    }
 
     @Override
     public void showMenu() {
@@ -29,9 +33,7 @@ public class CashierController extends BaseController {
     private void sellProduct() {
         ExceptionHandler.execute(() -> {
             List<Stock> availableStock = stockService.getAvailableProducts();
-
-            ConsoleUtil.printHeader("Доступные товары");
-            ConsoleUtil.println(TableFormatter.formatTable(availableStock));
+            ConsoleUtil.showEntitiesTable(availableStock, "Доступные товары");
 
             Long productId = InputHandler.getLongInput("Введите ID продукта: ");
             Stock stock = stockService.getStockByProductId(productId);
@@ -53,24 +55,19 @@ public class CashierController extends BaseController {
     private void viewSales() {
         ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
             List<Sale> sales = saleService.getSalesByDateRange(startDate, endDate);
-
-            ConsoleUtil.printHeader("Список продаж за период " + startDate + " - " + endDate);
-            ConsoleUtil.println(TableFormatter.formatTable(sales));
-
+            ConsoleUtil.showEntitiesTable(sales, "Список продаж за период " + startDate + " - " + endDate);
         }));
-
     }
 
     private void salesStatistics() {
         ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
             List<Sale> sales = saleService.getSalesByDateRange(startDate, endDate);
-            ConsoleUtil.printHeader("Статистика продаж за период " + startDate + " - " + endDate);
 
+            ConsoleUtil.printHeader("Статистика продаж за период " + startDate + " - " + endDate);
             int totalQuantity = sales.stream().mapToInt(Sale::getQuantity).sum();
 
             ConsoleUtil.println("Общее количество проданных товаров: " + totalQuantity + " шт.");
             ConsoleUtil.println("Количество продаж: " + sales.size());
-
         }));
     }
 

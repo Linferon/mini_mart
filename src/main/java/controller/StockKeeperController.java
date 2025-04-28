@@ -7,15 +7,22 @@ import util.*;
 import exception.handler.ExceptionHandler;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 public class StockKeeperController extends BaseController {
-    private final ProductService productService = ProductService.getInstance();
-    private final ProductCategoryService categoryService = ProductCategoryService.getInstance();
-    private final StockService stockService = StockService.getInstance();
-    private final PurchaseService purchaseService = PurchaseService.getInstance();
-    private static final List<ProductCategory> categories = ProductCategoryService.getInstance().getAllCategories();
+    private final ProductService productService;
+    private final ProductCategoryService categoryService;
+    private final StockService stockService;
+    private final PurchaseService purchaseService;
+    private final List<ProductCategory> categories;
+
+    public StockKeeperController() {
+        productService = ProductService.getInstance();
+        categoryService = ProductCategoryService.getInstance();
+        stockService = StockService.getInstance();
+        purchaseService = PurchaseService.getInstance();
+        categories = ProductCategoryService.getInstance().getAllCategories();
+    }
 
     @Override
     public void showMenu() {
@@ -41,17 +48,13 @@ public class StockKeeperController extends BaseController {
         ExceptionHandler.execute(() -> {
             String name = InputHandler.getStringInput("Введите название продукта: ");
 
-            ConsoleUtil.printHeader("Доступные категории продуктов");
-            ConsoleUtil.println(TableFormatter.formatTable(categories));
+            ConsoleUtil.showEntitiesTable(categories, "Доступные категории продуктов");
 
             Long categoryId = InputHandler.getLongInput("Введите ID категории продукта: ");
-            ProductCategory category = categoryService.getCategoryById(categoryId);
-
             BigDecimal buyPrice = InputHandler.getBigDecimalInput("Введите цену закупки: ");
             BigDecimal sellPrice = InputHandler.getBigDecimalInput("Введите цену продажи: ");
 
-            Product product = new Product(null, name, category, buyPrice, sellPrice);
-            productService.addProduct(product);
+            productService.addProduct(name, categoryId, buyPrice, sellPrice);
             showSuccess("Продукт успешно добавлен.");
         });
     }
@@ -59,9 +62,7 @@ public class StockKeeperController extends BaseController {
     private void viewProducts() {
         ExceptionHandler.execute(() -> {
             List<Product> products = productService.getAllProducts();
-
-            ConsoleUtil.printHeader("Список продуктов");
-            ConsoleUtil.println(TableFormatter.formatTable(products));
+            ConsoleUtil.showEntitiesTable(products, "Список продуктов");
         });
     }
 
@@ -71,9 +72,7 @@ public class StockKeeperController extends BaseController {
             Long productId = InputHandler.getLongInput("Введите ID продукта для обновления: ");
             Product product = productService.getProductById(productId);
 
-            ConsoleUtil.printHeader("Текущие данные продукта");
-            ConsoleUtil.println(product.toString());
-            ConsoleUtil.printDivider();
+            ConsoleUtil.showEntityDetails(product, "Текущие данные продукта");
 
             updateProductFields(product);
             productService.updateProduct(product);
@@ -97,13 +96,11 @@ public class StockKeeperController extends BaseController {
             product.setSellPrice(sellPrice);
         }
 
-        if (InputHandler.getStringInput("Хотите изменить категорию? (да/нет): ").equalsIgnoreCase("да")) {
-            ConsoleUtil.printHeader("Доступные категории");
-            ConsoleUtil.println(TableFormatter.formatTable(categories));
-
+        showConfirmationMenu("Хотите изменить категорию?", () -> {
+            ConsoleUtil.showEntitiesTable(categories, "Доступные категории");
             Long categoryId = InputHandler.getLongInput("Введите ID категории: ");
             product.setCategory(categoryService.getCategoryById(categoryId));
-        }
+        });
     }
 
     private void deleteProduct() {
@@ -112,8 +109,7 @@ public class StockKeeperController extends BaseController {
             Long productId = InputHandler.getLongInput("Введите ID продукта для удаления: ");
             Product product = productService.getProductById(productId);
 
-            ConsoleUtil.println("Вы собираетесь удалить продукт:");
-            ConsoleUtil.println(product.toString());
+            ConsoleUtil.showEntityDetails(product, "Вы собираетесь удалить продукт:");
 
             showConfirmationMenu("Вы уверены, что хотите удалить этот продукт?", () -> {
                 productService.deleteProduct(productId);
@@ -148,6 +144,7 @@ public class StockKeeperController extends BaseController {
                 stock.setQuantity(stock.getQuantity() + quantity);
                 stockService.updateStockQuantity(productId, stock.getQuantity());
                 showSuccess("Количество товара обновлено (ручное добавление).");
+
             } catch (ProductNotFoundException e) {
                 stock = new Stock(product, quantity);
                 stockService.addStock(stock);
@@ -156,34 +153,25 @@ public class StockKeeperController extends BaseController {
         });
     }
 
-
-
     private void viewAllStock() {
         ExceptionHandler.execute(() -> {
             List<Stock> stocks = stockService.getAllStock();
-
-            ConsoleUtil.printHeader("Остатки на складе");
-            ConsoleUtil.println(TableFormatter.formatTable(stocks));
-
+            ConsoleUtil.showEntitiesTable(stocks, "Остатки на складе");
         });
     }
 
     private void viewLowStock() {
         ExceptionHandler.execute(() -> {
-            int threshold = InputHandler.getIntInput("Введите порог низкого остатка: ");
+            int threshold = InputHandler.getValidIntInput("Введите порог низкого остатка: ");
             List<Stock> lowStocks = stockService.getLowStockProducts(threshold);
-
-            ConsoleUtil.printHeader("Товары с низким остатком (меньше " + threshold + ")");
-            ConsoleUtil.println(TableFormatter.formatTable(lowStocks));
+            ConsoleUtil.showEntitiesTable(lowStocks, "Товары с низким остатком (меньше " + threshold + ")");
         });
     }
 
     private void viewOutOfStock() {
         ExceptionHandler.execute(() -> {
             List<Stock> outOfStocks = stockService.getOutOfStockProducts();
-
-            ConsoleUtil.printHeader("Товары, отсутствующие на складе");
-            ConsoleUtil.println(TableFormatter.formatTable(outOfStocks));
+            ConsoleUtil.showEntitiesTable(outOfStocks, "Товары, отсутствующие на складе");
         });
     }
 
@@ -194,21 +182,9 @@ public class StockKeeperController extends BaseController {
 
             Stock currentStock = stockService.getStockByProductId(productId);
             Product product = currentStock.getProduct();
-
             ConsoleUtil.println("Текущий остаток товара '" + product.getName() + "': " + currentStock.getQuantity());
-            int quantity;
 
-            do {
-                quantity = InputHandler.getIntInput("Введите новое количество: ");
-                if(quantity <= 0) {
-                    ConsoleUtil.println("Вы не можете установить отрицательное количество продукта!");
-                }
-            } while (quantity < 0);
-
-            if (quantity < 5) {
-                ConsoleUtil.println("Внимание! Установлен низкий остаток товара. Рекомендуется пополнить запасы.");
-            }
-
+            int quantity = InputHandler.getValidIntInput("Введите новое количество товара");
             stockService.updateStockQuantity(productId, quantity);
             showSuccess("Количество товара успешно обновлено.");
         });
@@ -218,11 +194,9 @@ public class StockKeeperController extends BaseController {
         ExceptionHandler.execute(() -> {
             viewAllStock();
             Long productId = InputHandler.getLongInput("Введите ID продукта для удаления со склада: ");
-
             Stock stock = stockService.getStockByProductId(productId);
 
-            ConsoleUtil.println("Вы собираетесь удалить следующую запись склада:");
-            ConsoleUtil.println(stock.toString());
+            ConsoleUtil.showEntityDetails(stock, "Вы собираетесь удалить следующую запись склада:");
 
             showConfirmationMenu("Вы уверены, что хотите удалить эту запись склада?", () -> {
                 boolean deleted = stockService.deleteStock(productId);
@@ -235,7 +209,6 @@ public class StockKeeperController extends BaseController {
         });
     }
 
-
     private void managePurchases() {
         createMenu("Управление закупками")
                 .addMenuItem("Добавить закупку", this::addPurchase)
@@ -246,12 +219,9 @@ public class StockKeeperController extends BaseController {
                 .show();
     }
 
-
-
     private void addPurchase() {
         ExceptionHandler.execute(() -> {
             displayStockAndProducts();
-
             Long productId = InputHandler.getLongInput("Введите ID продукта: ");
             int quantity = InputHandler.getIntInput("Введите количество: ");
 
@@ -262,8 +232,6 @@ public class StockKeeperController extends BaseController {
 
             purchaseService.addPurchase(productId, quantity, totalCost);
             showSuccess("Закупка успешно добавлена.");
-
-            handlePriceUpdate(product, quantity, totalCost);
         });
     }
 
@@ -273,13 +241,10 @@ public class StockKeeperController extends BaseController {
             Long purchaseId = InputHandler.getLongInput("Введите ID закупки для обновления: ");
             Purchase purchase = purchaseService.getPurchaseById(purchaseId);
 
-            ConsoleUtil.println("Текущая информация о закупке:");
-            ConsoleUtil.println(purchase.toString());
-            ConsoleUtil.printDivider();
+            ConsoleUtil.showEntityDetails(purchase, "Текущая информация о закупке:");
 
-            int newQuantity = InputHandler.getIntInput("Введите новое количество: ");
+            int newQuantity = InputHandler.getValidIntInput("Введите новое количество: ");
             purchaseService.updatePurchase(purchaseId, newQuantity);
-
             showSuccess("Закупка успешно обновлена.");
         });
     }
@@ -290,8 +255,7 @@ public class StockKeeperController extends BaseController {
             Long purchaseId = InputHandler.getLongInput("Введите ID закупки для удаления: ");
             Purchase purchase = purchaseService.getPurchaseById(purchaseId);
 
-            ConsoleUtil.println("Вы собираетесь удалить следующую закупку:");
-            ConsoleUtil.println(purchase.toString());
+            ConsoleUtil.showEntityDetails(purchase, "Вы собираетесь удалить следующую закупку:");
 
             showConfirmationMenu("Вы уверены, что хотите удалить эту закупку?", () -> {
                 purchaseService.deletePurchase(purchaseId);
@@ -300,31 +264,12 @@ public class StockKeeperController extends BaseController {
         });
     }
 
-
     private void displayStockAndProducts() {
         List<Stock> stocks = stockService.getAllStock();
-        ConsoleUtil.printHeader("Текущие остатки товаров");
-        ConsoleUtil.println(TableFormatter.formatTable(stocks));
+        ConsoleUtil.showEntitiesTable(stocks, "Текущие остатки товаров");
 
         List<Product> products = productService.getAllProducts();
-        ConsoleUtil.printHeader("Список всех продуктов");
-        ConsoleUtil.println(TableFormatter.formatTable(products));
-    }
-
-    private void handlePriceUpdate(Product product, int quantity, BigDecimal totalCost) {
-        BigDecimal unitCost = totalCost.divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP);
-        BigDecimal previousUnitCost = product.getBuyPrice();
-
-        ConsoleUtil.println("Цена за единицу: " + unitCost + " (предыдущая: " + previousUnitCost + ")");
-
-        if (unitCost.compareTo(previousUnitCost) != 0) {
-            String updatePrice = InputHandler.getStringInput("Цена за единицу изменилась. Обновить цену закупки в продукте? (да/нет): ");
-            if (updatePrice.equalsIgnoreCase("да")) {
-                product.setBuyPrice(unitCost);
-                productService.updateProduct(product);
-                showSuccess("Цена закупки продукта обновлена.");
-            }
-        }
+        ConsoleUtil.showEntitiesTable(products, "Список всех продуктов");
     }
 
     private void viewPurchases() {
@@ -334,13 +279,7 @@ public class StockKeeperController extends BaseController {
                     DateTimeUtils.endOfDay(endDate)
             );
 
-            ConsoleUtil.printHeader("Список закупок за период " + startDate + " - " + endDate);
-            if (purchases.isEmpty()) {
-                ConsoleUtil.println("За выбранный период закупок не найдено.");
-                return;
-            }
-
-            ConsoleUtil.println(TableFormatter.formatTable(purchases));
+            ConsoleUtil.showEntitiesTable(purchases, "Список закупок за период " + startDate + " - " + endDate);
         });
     }
 }

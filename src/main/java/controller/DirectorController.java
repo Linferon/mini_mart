@@ -16,12 +16,18 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-
 public class DirectorController extends BaseController {
-    private final UserService userService = UserService.getInstance();
-    private final MonthlyBudgetService budgetService = MonthlyBudgetService.getInstance();
-    private final PayrollService payrollService = PayrollService.getInstance();
-    private static final List<Role> roles = RoleService.getInstance().getAllRoles();
+    private final UserService userService;
+    private final MonthlyBudgetService budgetService;
+    private final PayrollService payrollService;
+    private final List<Role> roles;
+
+    public DirectorController() {
+        userService = UserService.getInstance();
+        budgetService = MonthlyBudgetService.getInstance();
+        payrollService = PayrollService.getInstance();
+        roles = RoleService.getInstance().getAllRoles();
+    }
 
     @Override
     public void showMenu() {
@@ -45,17 +51,12 @@ public class DirectorController extends BaseController {
 
     private void toggleEmployeeStatus() {
         ExceptionHandler.execute(() -> {
-
             List<User> users = userService.getAllUsers();
-            ConsoleUtil.printHeader("Все сотрудники");
-            ConsoleUtil.println(TableFormatter.formatTable(users));
+            ConsoleUtil.showEntitiesTable(users, "Все сотрудники");
 
             Long userId = InputHandler.getLongInput("Введите ID сотрудника: ");
             User user = userService.getUserById(userId);
-
-            if (userService.getCurrentUser().equals(user)) {
-                LoggerUtil.error("Вы не можете уволить самого себя!");
-            }
+            validateSelfDismiss(user);
 
             user.setEnabled(!user.getEnabled());
             userService.updateUser(user);
@@ -70,8 +71,7 @@ public class DirectorController extends BaseController {
             List<User> users = userService.getActiveUsers();
             Map<String, Long> roleStats = userService.getRoleStats();
 
-            ConsoleUtil.printHeader("Активные сотрудники");
-            ConsoleUtil.println(TableFormatter.formatTable(users));
+            ConsoleUtil.showEntitiesTable(users, "Активные сотрудники");
 
             ConsoleUtil.printHeader("Распределение сотрудников по ролям");
             roleStats.forEach((role, count) ->
@@ -83,41 +83,14 @@ public class DirectorController extends BaseController {
     private void setBudget() {
         ExceptionHandler.execute(() -> {
             List<MonthlyBudget> currentBudgets = budgetService.getAllBudgets();
-
-            ConsoleUtil.printHeader("Текущие бюджеты");
-            ConsoleUtil.println(TableFormatter.formatTable(currentBudgets));
+            ConsoleUtil.showEntitiesTable(currentBudgets, "Текущие бюджеты");
 
             BigDecimal plannedIncome = InputHandler.getBigDecimalInput("Введите сумму планируемого дохода: ");
             BigDecimal plannedExpenses = InputHandler.getBigDecimalInput("Введите сумму планируемых расходов: ");
-
-            LocalDate budgetDate;
-            while (true) {
-                int year = InputHandler.getIntInput("Введите год (например, 2025): ");
-                int month = InputHandler.getIntInput("Введите месяц (1-12): ");
-
-                try {
-                    budgetDate = LocalDate.of(year, month, 1);
-                    LocalDate now = LocalDate.now().withDayOfMonth(1);
-
-                    if (budgetDate.isBefore(now)) {
-                        LoggerUtil.error("Нельзя установить бюджет на прошедший месяц.");
-                    } else {
-                        break;
-                    }
-                } catch (Exception e) {
-                    LoggerUtil.error("Неверный ввод даты. Попробуйте снова.");
-                }
-            }
+            LocalDate budgetDate = InputHandler.getValidBudgetDate();
 
             budgetService.createBudget(budgetDate, plannedIncome, plannedExpenses);
             showSuccess("Бюджет успешно установлен.");
-
-            BigDecimal netResult = plannedIncome.subtract(plannedExpenses);
-            ConsoleUtil.println("Прогнозируемый чистый результат: " + netResult);
-
-            if (netResult.compareTo(BigDecimal.ZERO) < 0) {
-                ConsoleUtil.println("Внимание: прогнозируется убыток!");
-            }
         });
     }
 
@@ -128,13 +101,7 @@ public class DirectorController extends BaseController {
             String surname = InputHandler.getStringInput("Введите фамилию сотрудника: ");
             String email = InputHandler.getStringInput("Введите email: ");
             String password = InputHandler.getStringInput("Введите пароль: ");
-
-            ConsoleUtil.printHeader("Доступные роли");
-
-            ConsoleUtil.println(TableFormatter.formatTable(roles));
-
-            int roleChoice = InputHandler.getIntInput("Введите номер роли: ");
-            Role selectedRole = roles.get(roleChoice - 1);
+            Role selectedRole = selectRole();
 
             User newUser = new User(null, name, surname, email, password, true, selectedRole, null, null);
             userService.registerUser(newUser);
@@ -148,25 +115,17 @@ public class DirectorController extends BaseController {
             Long userId = InputHandler.getLongInput("Введите ID сотрудника для обновления: ");
             User existingUser = userService.getUserById(userId);
 
-            ConsoleUtil.printHeader("Текущие данные сотрудника");
-            ConsoleUtil.println(existingUser.toString());
-            ConsoleUtil.printDivider();
+            ConsoleUtil.showEntityDetails(existingUser, "Текущие данные сотрудника");
 
             InputHandler.inputIfPresent("Введите новое имя", existingUser::setName);
             InputHandler.inputIfPresent("Введите новую фамилию", existingUser::setSurname);
             InputHandler.inputIfPresent("Введите новый email", existingUser::setEmail);
 
             if (!userService.getCurrentUser().equals(existingUser)) {
-                String changeRole = InputHandler.getStringInput("Хотите изменить роль? (да/любое слово): ");
-
-                if (changeRole.equalsIgnoreCase("да")) {
-                    ConsoleUtil.printHeader("Доступные роли");
-                    ConsoleUtil.println(TableFormatter.formatTable(roles));
-
-                    int roleChoice = InputHandler.getIntInput("Введите номер роли: ");
-                    Role selectedRole = roles.get(roleChoice - 1);
+                showConfirmationMenu("Хотите изменить роль? (да/нет): ", () -> {
+                    Role selectedRole = selectRole();
                     existingUser.setRole(selectedRole);
-                }
+                });
             }
 
             userService.updateUser(existingUser);
@@ -187,7 +146,7 @@ public class DirectorController extends BaseController {
         }));
     }
 
-    private void printPayrollsSummary(LocalDate start, LocalDate end){
+    private void printPayrollsSummary(LocalDate start, LocalDate end) {
         List<Payroll> payrolls = payrollService.getPayrollsByPeriod(start, end);
 
         long totalPayrolls = payrolls.size();
@@ -216,5 +175,17 @@ public class DirectorController extends BaseController {
         ConsoleUtil.println("Фактические расходы: " + actualExpenses);
         ConsoleUtil.println("Плановая прибыль: " + plannedProfit);
         ConsoleUtil.println("Фактическая прибыль: " + actualProfit);
+    }
+
+    private Role selectRole() {
+        ConsoleUtil.showEntitiesTable(roles, "Доступные роли");
+        int roleChoice = InputHandler.getIntInput("Введите номер роли: ");
+        return roles.get(roleChoice - 1);
+    }
+
+    private void validateSelfDismiss(User user) {
+        if (userService.getCurrentUser().equals(user)) {
+            LoggerUtil.error("Вы не можете уволить самого себя!");
+        }
     }
 }
