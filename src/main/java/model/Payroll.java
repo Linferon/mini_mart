@@ -7,17 +7,17 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public class Payroll implements FormattableEntity {
+public class Payroll implements FormattableEntity, TimestampedEntity {
     private Long id;
-    private final User employee;
+    private User employee;
     private User accountant;
-    private final Float hoursWorked;
-    private final BigDecimal hourlyRate;
+    private Float hoursWorked;
+    private BigDecimal hourlyRate;
     private BigDecimal totalAmount;
-    private final LocalDate periodStart;
-    private final LocalDate periodEnd;
-    private final LocalDate paymentDate;
-    private final Boolean isPaid;
+    private LocalDate periodStart;
+    private LocalDate periodEnd;
+    private LocalDate paymentDate;
+    private Boolean isPaid;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -30,10 +30,8 @@ public class Payroll implements FormattableEntity {
     private static final int STATUS_WIDTH = 10;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public Payroll(Long id, User employee, User accountant, Float hoursWorked, BigDecimal hourlyRate, BigDecimal totalAmount,
-                   LocalDate periodStart, LocalDate periodEnd, LocalDate paymentDate, Boolean isPaid,
-                   Timestamp createdAt, Timestamp updatedAt) {
-        this.id = id;
+
+    public Payroll(User employee, User accountant, Float hoursWorked, BigDecimal hourlyRate, BigDecimal totalAmount, LocalDate periodStart  , LocalDate periodEnd) {
         this.employee = employee;
         this.accountant = accountant;
         this.hoursWorked = hoursWorked;
@@ -41,6 +39,12 @@ public class Payroll implements FormattableEntity {
         this.totalAmount = totalAmount;
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
+    }
+    public Payroll(Long id, User employee, User accountant, Float hoursWorked, BigDecimal hourlyRate, BigDecimal totalAmount,
+                   LocalDate periodStart, LocalDate periodEnd, LocalDate paymentDate, Boolean isPaid,
+                   Timestamp createdAt, Timestamp updatedAt) {
+        this(employee, accountant, hoursWorked, hourlyRate, totalAmount,  periodStart, periodEnd);
+        this.id = id;
         this.paymentDate = paymentDate;
         this.isPaid = isPaid;
         this.createdAt = createdAt;

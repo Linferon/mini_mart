@@ -5,7 +5,7 @@ import util.TableFormatter;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 
-public class Stock implements FormattableEntity {
+public class Stock implements FormattableEntity, TimestampedEntity {
     private Product product;
     private Integer quantity;
     private Timestamp createdAt;

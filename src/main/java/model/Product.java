@@ -5,7 +5,7 @@ import util.TableFormatter;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
-public class Product implements FormattableEntity {
+public class Product implements FormattableEntity, TimestampedEntity {
     private Long id;
     private String name;
     private ProductCategory category;

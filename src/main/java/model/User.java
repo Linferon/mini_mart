@@ -4,7 +4,7 @@ import util.TableFormatter;
 
 import java.sql.Timestamp;
 
-public class User implements FormattableEntity {
+public class User implements FormattableEntity, TimestampedEntity {
     private Long id;
     private String name;
     private String surname;
@@ -133,7 +133,15 @@ public class User implements FormattableEntity {
         return createdAt;
     }
 
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Timestamp getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

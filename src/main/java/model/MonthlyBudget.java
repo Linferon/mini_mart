@@ -7,7 +7,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public class MonthlyBudget implements FormattableEntity {
+public class MonthlyBudget implements FormattableEntity, TimestampedEntity {
     private Long id;
     private LocalDate budgetDate;
     private BigDecimal plannedIncome;
