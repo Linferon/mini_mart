@@ -57,17 +57,6 @@ public class IncomeDao extends Dao<Income> {
         return queryList(sql, sourceId);
     }
 
-    public List<Income> findByAccountant(Long accountantId) {
-        String sql = "SELECT i.*, " +
-                "s.NAME as SOURCE_NAME, " +
-                "u.NAME as ACCOUNTANT_NAME, u.SURNAME as ACCOUNTANT_SURNAME " +
-                "FROM " + INCOME_TABLE + " i " +
-                "LEFT JOIN " + INCOME_SOURCE_TABLE + " s ON i.SOURCE_ID = s.ID " +
-                "LEFT JOIN " + USER_TABLE + " u ON i.ACCOUNTANT_ID = u.ID " +
-                "WHERE i.ACCOUNTANT_ID = ?";
-        return queryList(sql, accountantId);
-    }
-
     public List<Income> findByDateRange(Timestamp startDate, Timestamp endDate) {
         String sql = "SELECT i.*, " +
                 "s.NAME as SOURCE_NAME, " +

@@ -48,36 +48,12 @@ public class UserDao extends Dao<User> {
         return queryList(sql);
     }
 
-    public List<User> findByName(String name) {
-        String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
-                "FROM " + USER_TABLE + " u " +
-                "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID " +
-                "WHERE u.NAME LIKE ?";
-        return queryList(sql, name + "%");
-    }
-
-    public List<User> findDismissedUsers() {
-        String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
-                "FROM " + USER_TABLE + " u " +
-                "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID " +
-                "WHERE u.ENABLED = FALSE ?";
-        return queryList(sql);
-    }
-
     public Optional<User> findByEmail(String email) {
         String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
                 "FROM " + USER_TABLE + " u " +
                 "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID " +
                 "WHERE u.EMAIL = ?";
         return querySingle(sql, email);
-    }
-
-    public List<User> findByRole(Long roleId) {
-        String sql = "SELECT u.*, r.NAME as ROLE_NAME " +
-                "FROM " + USER_TABLE + " u " +
-                "LEFT JOIN " + ROLE_TABLE + " r ON u.ROLE_ID = r.ID " +
-                "WHERE u.ROLE_ID = ?";
-        return queryList(sql, roleId);
     }
 
     public Long save(User user) {
@@ -93,7 +69,7 @@ public class UserDao extends Dao<User> {
                     user.getSurname(),
                     user.getEmail(),
                     user.getPassword(),
-                    user.getRole().getId(),
+                    user.getRole().id(),
                     user.getCreatedAt() != null ? user.getCreatedAt() : now,
                     user.getUpdatedAt() != null ? user.getUpdatedAt() : now);
 
@@ -121,7 +97,7 @@ public class UserDao extends Dao<User> {
                 user.getEmail(),
                 user.getPassword(),
                 user.getEnabled(),
-                user.getRole().getId(),
+                user.getRole().name(),
                 now,
                 user.getId());
     }

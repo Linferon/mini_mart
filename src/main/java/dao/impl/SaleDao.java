@@ -64,19 +64,6 @@ public class SaleDao extends Dao<Sale> {
         return queryList(sql, productId);
     }
 
-    public List<Sale> findByCashier(Long cashierId) {
-        String sql = "SELECT s.*, " +
-                "p.NAME as PRODUCT_NAME, " +
-                "pc.NAME as PRODUCT_CATEGORY_NAME, " +
-                "u.NAME as CASHIER_NAME, u.SURNAME as CASHIER_SURNAME " +
-                "FROM " + SALE_TABLE + " s " +
-                "LEFT JOIN " + PRODUCT_TABLE +" p ON s.PRODUCT_ID = p.ID " +
-                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " pc ON p.CATEGORY_ID = pc.ID " +
-                "LEFT JOIN " + USER_TABLE + " u ON s.CASHIER_ID = u.ID " +
-                "WHERE s.CASHIER_ID = ?";
-        return queryList(sql, cashierId);
-    }
-
     public List<Sale> findByDateRange(Timestamp startDate, Timestamp endDate) {
         String sql = "SELECT s.*, " +
                 "p.NAME as PRODUCT_NAME, " +

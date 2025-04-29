@@ -69,17 +69,6 @@ public class PayrollDao extends Dao<Payroll> {
         return queryList(sql, periodStart, periodEnd);
     }
 
-    public List<Payroll> findByPaymentStatus(boolean isPaid) {
-        String sql = "SELECT p.*, " +
-                "e.NAME as EMPLOYEE_NAME, e.SURNAME as EMPLOYEE_SURNAME, " +
-                "a.NAME as ACCOUNTANT_NAME, a.SURNAME as ACCOUNTANT_SURNAME " +
-                "FROM " + PAYROLL_TABLE + " p " +
-                "LEFT JOIN " + USER_TABLE + " e ON p.EMPLOYEE_ID = e.ID " +
-                "LEFT JOIN " + USER_TABLE + " a ON p.ACCOUNTANT_ID = a.ID " +
-                "WHERE p.IS_PAID = ?";
-        return queryList(sql, isPaid);
-    }
-
     public Long save(Payroll payroll) {
         if (payroll.getId() == null) {
             Timestamp now = new Timestamp(System.currentTimeMillis());

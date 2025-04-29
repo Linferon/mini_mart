@@ -70,17 +70,6 @@ public class ExpenseDao extends Dao<Expense> {
         return queryList(sql, categoryId);
     }
 
-    public List<Expense> findByAccountant(Long accountantId) {
-        String sql = "SELECT e.*, " +
-                "c.NAME as CATEGORY_NAME, " +
-                "u.NAME as ACCOUNTANT_NAME, u.SURNAME as ACCOUNTANT_SURNAME " +
-                "FROM " + EXPENSE_TABLE + " e " +
-                "LEFT JOIN " + EXPENSE_CATEGORY_TABLE + " c ON e.CATEGORY_ID = c.ID " +
-                "LEFT JOIN " + USER_TABLE + " u ON e.ACCOUNTANT_ID = u.ID " +
-                "WHERE e.ACCOUNTANT_ID = ?";
-        return queryList(sql, accountantId);
-    }
-
     public List<Expense> findByDateRange(Timestamp startDate, Timestamp endDate) {
         String sql = "SELECT e.*, " +
                 "c.NAME as CATEGORY_NAME, " +

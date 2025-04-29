@@ -41,22 +41,6 @@ public class ProductDao extends Dao<Product> {
         return queryList(sql);
     }
 
-    public List<Product> findByCategory(Long categoryId) {
-        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
-                "FROM " + PRODUCT_TABLE + " p " +
-                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE + " c ON p.CATEGORY_ID = c.ID " +
-                "WHERE p.CATEGORY_ID = ?";
-        return queryList(sql, categoryId);
-    }
-
-    public List<Product> findByName(String name) {
-        String sql = "SELECT p.*, c.NAME as CATEGORY_NAME " +
-                "FROM " + PRODUCT_TABLE + " p " +
-                "LEFT JOIN " + PRODUCT_CATEGORY_TABLE +" c ON p.CATEGORY_ID = c.ID " +
-                "WHERE p.NAME LIKE ?";
-        return queryList(sql,  name + "%");
-    }
-
     public Long save(Product product) {
         if (product.getId() == null) {
             Timestamp now = new Timestamp(System.currentTimeMillis());
