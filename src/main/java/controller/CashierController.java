@@ -4,12 +4,14 @@ import model.Sale;
 import model.Stock;
 import service.SaleService;
 import service.StockService;
-import util.ConsoleUtil;
 import exception.handler.ExceptionHandler;
-import util.InputHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static util.ConsoleUtil.*;
+import static util.InputHandler.getIntInput;
+import static util.InputHandler.getLongInput;
 
 public class CashierController extends BaseController {
     private final StockService stockService;
@@ -25,7 +27,6 @@ public class CashierController extends BaseController {
         createMenu("Меню Кассира")
                 .addMenuItem("Продать товар", this::sellProduct)
                 .addMenuItem("Просмотреть продажи", this::viewSales)
-                .addMenuItem("Статистика продаж", this::salesStatistics)
                 .addExitItem("Выйти из системы")
                 .show();
     }
@@ -33,12 +34,12 @@ public class CashierController extends BaseController {
     private void sellProduct() {
         ExceptionHandler.execute(() -> {
             List<Stock> availableStock = stockService.getAvailableProducts();
-            ConsoleUtil.showEntitiesTable(availableStock, "Доступные товары");
+            showEntitiesTable(availableStock, "Доступные товары");
 
-            Long productId = InputHandler.getLongInput("Введите ID продукта: ");
+            Long productId = getLongInput("Введите ID продукта: ");
             Stock stock = stockService.getStockByProductId(productId);
 
-            int quantity = InputHandler.getIntInput("Введите количество: ");
+            int quantity = getIntInput("Введите количество: ");
 
             if (stock.getQuantity() < quantity) {
                 showError("Недостаточно товара на складе. Доступно: " + stock.getQuantity());
@@ -55,29 +56,17 @@ public class CashierController extends BaseController {
     private void viewSales() {
         ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
             List<Sale> sales = saleService.getSalesByDateRange(startDate, endDate);
-            ConsoleUtil.showEntitiesTable(sales, "Список продаж за период " + startDate + " - " + endDate);
-        }));
-    }
-
-    private void salesStatistics() {
-        ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
-            List<Sale> sales = saleService.getSalesByDateRange(startDate, endDate);
-
-            ConsoleUtil.printHeader("Статистика продаж за период " + startDate + " - " + endDate);
-            int totalQuantity = sales.stream().mapToInt(Sale::getQuantity).sum();
-
-            ConsoleUtil.println("Общее количество проданных товаров: " + totalQuantity + " шт.");
-            ConsoleUtil.println("Количество продаж: " + sales.size());
+            showEntitiesTable(sales, "Список продаж за период " + startDate + " - " + endDate);
         }));
     }
 
     private void printCheck(Sale sale) {
-        ConsoleUtil.printHeader("ЧЕК");
-        ConsoleUtil.println("Товар: " + sale.getProduct().getName());
-        ConsoleUtil.println("Количество: " + sale.getQuantity());
-        ConsoleUtil.println("Цена за единицу: " + sale.getProduct().getSellPrice() + " руб.");
-        ConsoleUtil.println("Итого: " + sale.getTotalAmount() + " руб.");
-        ConsoleUtil.println("Дата: " + LocalDateTime.now());
-        ConsoleUtil.printDivider();
+        printHeader("ЧЕК");
+        println("Товар: " + sale.getProduct().getName());
+        println("Количество: " + sale.getQuantity());
+        println("Цена за единицу: " + sale.getProduct().getSellPrice() + " руб.");
+        println("Итого: " + sale.getTotalAmount() + " руб.");
+        println("Дата: " + LocalDateTime.now());
+        printDivider();
     }
 }

@@ -13,6 +13,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import static util.ConsoleUtil.*;
+import static util.InputHandler.*;
+import static util.LoggerUtil.error;
+
 public class DirectorController extends BaseController {
     private final UserService userService;
     private final MonthlyBudgetService budgetService;
@@ -60,15 +64,15 @@ public class DirectorController extends BaseController {
         private void viewAllBudgets() {
             ExceptionHandler.execute(() -> {
                 List<MonthlyBudget> budgets = budgetService.getAllBudgets();
-                ConsoleUtil.showEntitiesTable(budgets, "Список всех бюджетов на месяц: ");
+                showEntitiesTable(budgets, "Список всех бюджетов на месяц: ");
             });
         }
 
         protected void viewBudgetsByDateRange(LocalDate startDate, LocalDate endDate) {
             ExceptionHandler.execute(() -> {
                 List<MonthlyBudget> budgets = budgetService.getBudgetsByDateRange(startDate, endDate);
-                ConsoleUtil.printHeader("Статистика бюджета за период " + startDate + " - " + endDate);
-                ConsoleUtil.println(TableFormatter.formatTable(budgets));
+                printHeader("Статистика бюджета за период " + startDate + " - " + endDate);
+                println(TableFormatter.formatTable(budgets));
             });
         }
 
@@ -78,9 +82,9 @@ public class DirectorController extends BaseController {
 
         private void setBudget() {
             ExceptionHandler.execute(() -> {
-                BigDecimal plannedIncome = InputHandler.getBigDecimalInput("Введите сумму планируемого дохода: ");
-                BigDecimal plannedExpenses = InputHandler.getBigDecimalInput("Введите сумму планируемых расходов: ");
-                LocalDate budgetDate = InputHandler.getValidBudgetDate();
+                BigDecimal plannedIncome = getBigDecimalInput("Введите сумму планируемого дохода: ");
+                BigDecimal plannedExpenses = getBigDecimalInput("Введите сумму планируемых расходов: ");
+                LocalDate budgetDate = getValidBudgetDate();
 
                 budgetService.createBudget(budgetDate, plannedIncome, plannedExpenses);
                 showSuccess("Бюджет успешно установлен.");
@@ -89,14 +93,14 @@ public class DirectorController extends BaseController {
 
         private void editBudget() {
             viewBudgetsByDateRange();
-            Long budgetId = InputHandler.getLongInput("Введите id бюджета для редактирования");
+            Long budgetId = getLongInput("Введите id бюджета для редактирования");
             MonthlyBudget budget = budgetService.getBudgetById(budgetId);
-            ConsoleUtil.showEntityDetails(budget, "Редактирование бюджета");
+            showEntityDetails(budget, "Редактирование бюджета");
 
-            BigDecimal plannedIncome = InputHandler.getUpdatedBigDecimalValue("сумму планируемых доходов", budget.getPlannedIncome());
-            BigDecimal plannedExpense = InputHandler.getUpdatedBigDecimalValue("сумму планируемых расходов", budget.getPlannedExpenses());
+            BigDecimal plannedIncome = getUpdatedBigDecimalValue("сумму планируемых доходов", budget.getPlannedIncome());
+            BigDecimal plannedExpense = getUpdatedBigDecimalValue("сумму планируемых расходов", budget.getPlannedExpenses());
             LocalDate oldIncomeDate = budget.getBudgetDate();
-            LocalDate budgetDate = InputHandler.getUpdatedDateValue("дату бюджета", oldIncomeDate);
+            LocalDate budgetDate = getUpdatedDateValue("дату бюджета", oldIncomeDate);
 
             if (budgetService.updateBudget(budgetId, plannedIncome, plannedExpense, budgetDate)) {
                 showSuccess("Доход успешно обновлен.");
@@ -122,21 +126,21 @@ public class DirectorController extends BaseController {
                 List<User> users = userService.getActiveUsers();
                 Map<String, Long> roleStats = userService.getRoleStats();
 
-                ConsoleUtil.showEntitiesTable(users, "Активные сотрудники");
+                showEntitiesTable(users, "Активные сотрудники");
 
-                ConsoleUtil.printHeader("Распределение сотрудников по ролям");
+                printHeader("Распределение сотрудников по ролям");
                 roleStats.forEach((role, count) ->
-                        ConsoleUtil.println(role + ": " + count + " чел.")
+                        println(role + ": " + count + " чел.")
                 );
             });
         }
 
         private void registerNewEmployee() {
             ExceptionHandler.execute(() -> {
-                String name = InputHandler.getStringInput("Введите имя сотрудника: ");
-                String surname = InputHandler.getStringInput("Введите фамилию сотрудника: ");
-                String email = InputHandler.getStringInput("Введите email: ");
-                String password = InputHandler.getStringInput("Введите пароль: ");
+                String name = getStringInput("Введите имя сотрудника: ");
+                String surname = getStringInput("Введите фамилию сотрудника: ");
+                String email = getStringInput("Введите email: ");
+                String password = getStringInput("Введите пароль: ");
                 Role selectedRole = selectRole();
 
                 User newUser = new User(null, name, surname, email, password, true, selectedRole, null, null);
@@ -148,14 +152,14 @@ public class DirectorController extends BaseController {
         private void updateEmployee() {
             ExceptionHandler.execute(() -> {
                 viewAllEmployees();
-                Long userId = InputHandler.getLongInput("Введите ID сотрудника для обновления: ");
+                Long userId = getLongInput("Введите ID сотрудника для обновления: ");
                 User existingUser = userService.getUserById(userId);
 
-                ConsoleUtil.showEntityDetails(existingUser, "Текущие данные сотрудника");
+                showEntityDetails(existingUser, "Текущие данные сотрудника");
 
-                InputHandler.inputIfPresent("Введите новое имя", existingUser::setName);
-                InputHandler.inputIfPresent("Введите новую фамилию", existingUser::setSurname);
-                InputHandler.inputIfPresent("Введите новый email", existingUser::setEmail);
+                inputIfPresent("Введите новое имя", existingUser::setName);
+                inputIfPresent("Введите новую фамилию", existingUser::setSurname);
+                inputIfPresent("Введите новый email", existingUser::setEmail);
 
                 if (!userService.getCurrentUser().equals(existingUser)) {
                     showConfirmationMenu("Хотите изменить роль? ", () -> {
@@ -172,7 +176,7 @@ public class DirectorController extends BaseController {
         private void toggleEmployeeStatus() {
             ExceptionHandler.execute(() -> {
                 viewAllEmployees();
-                Long userId = InputHandler.getLongInput("Введите ID сотрудника: ");
+                Long userId = getLongInput("Введите ID сотрудника: ");
                 User user = userService.getUserById(userId);
 
                 validateSelfDismiss(user);
@@ -185,14 +189,14 @@ public class DirectorController extends BaseController {
         }
 
         private Role selectRole() {
-            ConsoleUtil.showEntitiesTable(roles, "Доступные роли");
-            int roleChoice = InputHandler.getIntInput("Введите номер роли: ");
+            showEntitiesTable(roles, "Доступные роли");
+            int roleChoice = getIntInput("Введите номер роли: ");
             return roles.get(roleChoice - 1);
         }
 
         private void validateSelfDismiss(User user) {
             if (userService.getCurrentUser().equals(user)) {
-                LoggerUtil.error("Вы не можете уволить самого себя!");
+                error("Вы не можете уволить самого себя!");
             }
         }
     }
@@ -201,7 +205,7 @@ public class DirectorController extends BaseController {
         private void viewStatistics() {
             ExceptionHandler.execute(() -> showDateRangeMenu((startDate, endDate) -> {
                 budgetController.viewBudgetsByDateRange(startDate, endDate);
-                ConsoleUtil.printHeader("Сводка");
+                printHeader("Сводка");
                 printBudgetSummary(startDate, endDate);
                 printPayrollsSummary(startDate, endDate);
             }));
@@ -214,10 +218,10 @@ public class DirectorController extends BaseController {
             long paidPayrolls = payrolls.stream().filter(Payroll::isPaid).count();
             long unpaidPayrolls = totalPayrolls - paidPayrolls;
 
-            ConsoleUtil.printHeader("Статистика зарплат за период " + start + " - " + end);
-            ConsoleUtil.println("Всего начислений: " + totalPayrolls);
-            ConsoleUtil.println("Выплачено: " + paidPayrolls + " (" + (paidPayrolls * 100 / totalPayrolls) + "%)");
-            ConsoleUtil.println("Не выплачено: " + unpaidPayrolls + " (" + (unpaidPayrolls * 100 / totalPayrolls) + "%)");
+            printHeader("Статистика зарплат за период " + start + " - " + end);
+            println("Всего начислений: " + totalPayrolls);
+            println("Выплачено: " + paidPayrolls + " (" + (paidPayrolls * 100 / totalPayrolls) + "%)");
+            println("Не выплачено: " + unpaidPayrolls + " (" + (unpaidPayrolls * 100 / totalPayrolls) + "%)");
         }
 
 
@@ -230,12 +234,12 @@ public class DirectorController extends BaseController {
             BigDecimal plannedProfit = plannedIncome.subtract(plannedExpenses);
             BigDecimal actualProfit = actualIncome.subtract(actualExpenses);
 
-            ConsoleUtil.println("Плановый доход: " + plannedIncome);
-            ConsoleUtil.println("Плановые расходы: " + plannedExpenses);
-            ConsoleUtil.println("Фактический доход: " + actualIncome);
-            ConsoleUtil.println("Фактические расходы: " + actualExpenses);
-            ConsoleUtil.println("Плановая прибыль: " + plannedProfit);
-            ConsoleUtil.println("Фактическая прибыль: " + actualProfit);
+            println("Плановый доход: " + plannedIncome);
+            println("Плановые расходы: " + plannedExpenses);
+            println("Фактический доход: " + actualIncome);
+            println("Фактические расходы: " + actualExpenses);
+            println("Плановая прибыль: " + plannedProfit);
+            println("Фактическая прибыль: " + actualProfit);
         }
     }
 }
