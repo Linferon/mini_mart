@@ -30,4 +30,7 @@ VALUES (PARSEDATETIME('01.07.2024', 'dd.MM.yyyy'), 400000.00, 350000.00, 420000.
         (SELECT id FROM users WHERE email = 'ivan@company.com')),
 
        (PARSEDATETIME('01.04.2025', 'dd.MM.yyyy'), 490000.00, 405000.00, 500000.00, 400000.00,
+        (SELECT id FROM users WHERE email = 'ivan@company.com')),
+
+       (PARSEDATETIME('01.05.2025', 'dd.MM.yyyy'), 500000.00, 405000.00, 500000.00, 400000.00,
         (SELECT id FROM users WHERE email = 'ivan@company.com'));
