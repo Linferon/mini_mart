@@ -5,18 +5,21 @@ import exception.nsee.ExpenseNotFoundException;
 import model.Expense;
 import model.ExpenseCategory;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
+import java.util.Objects;
+
+import static java.math.BigDecimal.ZERO;
+import static util.DateTimeUtils.convertToTimestamp;
+import static util.DateTimeUtils.extractLocalDate;
+import static util.EntityUtil.findAndValidate;
+import static util.LoggerUtil.*;
+import static util.ValidationUtil.*;
+
 
 public class ExpenseService {
     private static ExpenseService instance;
@@ -27,9 +30,9 @@ public class ExpenseService {
 
     private ExpenseService() {
         this(new ExpenseDao(),
-             UserService.getInstance(),
-             ExpenseCategoryService.getInstance(),
-             MonthlyBudgetService.getInstance());
+                UserService.getInstance(),
+                ExpenseCategoryService.getInstance(),
+                MonthlyBudgetService.getInstance());
     }
 
     ExpenseService(ExpenseDao expenseDao,
@@ -53,106 +56,112 @@ public class ExpenseService {
         return findAndValidate(expenseDao::findAll, "Расходы не найдены");
     }
 
-
     public Expense getExpenseById(Long id) {
         return expenseDao.findById(id)
                 .orElseThrow(() -> new ExpenseNotFoundException("Расход с ID " + id + " не найден"));
     }
 
-
     public List<Expense> getExpensesByCategory(Long categoryId) {
         categoryService.getExpenseCategoryById(categoryId);
-
-        return findAndValidate(() -> expenseDao.findByCategory(categoryId),
-                "Расходы по категории с ID " + categoryId + " не найдены");
+        return findAndValidate(
+                () -> expenseDao.findByCategory(categoryId),
+                "Расходы по категории с ID " + categoryId + " не найдены"
+        );
     }
 
     public List<Expense> getExpensesByDateRange(Timestamp startDate, Timestamp endDate) {
         validateDateRange(startDate, endDate);
+        return findAndValidate(
+                () -> expenseDao.findByDateRange(startDate, endDate),
+                "Расходы за период с " + startDate + " по " + endDate + " не найдены"
+        );
+    }
 
-        return findAndValidate(() -> expenseDao.findByDateRange(startDate, endDate),
-                "Расходы за период с " + startDate + " по " + endDate + " не найдены");
+    public Expense getExpenseByAmountAndDate(BigDecimal totalAmount, Timestamp purchaseDate) {
+        return expenseDao.findByTotalAmountAndDate(totalAmount, purchaseDate)
+                .orElseThrow(() -> new ExpenseNotFoundException("Расход не был найден"));
     }
 
     public BigDecimal getTotalExpenses(List<Expense> expenses) {
         return expenses.stream()
                 .map(Expense::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(ZERO, BigDecimal::add);
     }
 
     public void addExpense(Expense expense) {
         validateExpense(expense);
+        prepareExpenseBeforeSave(expense);
 
-        if (expense.getExpenseDate() == null) {
-            expense.setExpenseDate(Timestamp.from(Instant.now()));
-        }
-
-        if (expense.getAccountant() == null) {
-            expense.setAccountant(userService.getCurrentUser());
-        }
-
-        Long id = expenseDao.save(expense);
-        if (id != null) {
-            LoggerUtil.info("Добавлен новый расход с ID " + id +
-                    " по категории '" + expense.getCategory().name() +
-                    "', сумма: " + expense.getTotalAmount());
-
-            // Update monthly budget with the expense amount
-            try {
-                budgetService.updateMonthlyBudgetExpense(expense.getExpenseDate().toLocalDateTime().toLocalDate(), expense.getTotalAmount());
-            } catch (Exception e) {
-                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
-            }
-        }
-    }
-
-    public void addPurchaseExpense(BigDecimal totalAmount) {
-        ExpenseCategory category = categoryService.getExpenseCategoryByName("Покупка товара");
-        Expense expense = new Expense(
-                category,
-                totalAmount
-        );
-        addExpense(expense);
+        expenseDao.save(expense);
+        logExpenseOperation("Добавлен", expense);
+        updateBudgetAfterAdd(expense);
     }
 
     public void addExpense(Long categoryId, BigDecimal amount, Timestamp expenseDate) {
-        if (categoryId == null) {
-            throw new IllegalArgumentException("ID категории должен быть указан");
-        }
-
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Сумма должна быть положительным числом");
-        }
-
         ExpenseCategory category = categoryService.getExpenseCategoryById(categoryId);
         User accountant = userService.getCurrentUser();
 
         Expense expense = new Expense(
                 category,
                 amount,
-                expenseDate);
-
-        expense.setAccountant(accountant);
+                expenseDate,
+                accountant);
 
         addExpense(expense);
     }
 
-    public void addExpense(Long categoryId, BigDecimal amount) {
-        if (categoryId == null) {
-            throw new IllegalArgumentException("ID категории должен быть указан");
-        }
-
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Сумма должна быть положительным числом");
-        }
-
-        ExpenseCategory category = categoryService.getExpenseCategoryById(categoryId);
-
+    public void addPurchaseExpense(BigDecimal totalAmount) {
+        ExpenseCategory category = categoryService.getExpenseCategoryByName("Покупка товара");
         Expense expense = new Expense(
                 category,
-                amount);
+                totalAmount);
 
         addExpense(expense);
+    }
+
+    public void addSalaryExpense(BigDecimal amount, LocalDate paymentDate) {
+        try {
+            ExpenseCategory salaryCategory = categoryService.getExpenseCategoryByName("Заработная плата");
+            Timestamp paymentTimestamp = convertToTimestamp(paymentDate);
+
+            Expense expense = new Expense(
+                    salaryCategory,
+                    amount,
+                    paymentTimestamp,
+                    userService.getCurrentUser());
+
+            expenseDao.save(expense);
+            budgetService.updateMonthlyBudgetExpense(paymentDate, amount);
+            info("Добавлен расход на зарплату на сумму " + amount);
+        } catch (Exception e) {
+            error("Ошибка при добавлении расхода на зарплату: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean updateExpense(Expense expense) {
+        Expense oldExpense = getExpenseById(expense.getId());
+        validateExpense(expense);
+
+        boolean updated = expenseDao.update(expense);
+
+        if (updated) {
+            logExpenseOperation("Обновлен", expense);
+            updateBudgetAfterUpdate(oldExpense, expense);
+        } else {
+            warn("Не удалось обновить расход с ID " + expense.getId());
+        }
+        return updated;
+    }
+
+    public boolean updateExpense(Long expenseId, Long categoryId, BigDecimal amount, LocalDate expenseDate) {
+        Expense expense = getExpenseById(expenseId);
+        ExpenseCategory expenseCategory = categoryService.getExpenseCategoryById(categoryId);
+
+        expense.setCategory(expenseCategory);
+        expense.setTotalAmount(amount);
+        expense.setExpenseDate(convertToTimestamp(expenseDate));
+
+        return updateExpense(expense);
     }
 
     public void updatePurchaseExpense(BigDecimal oldTotalAmount, BigDecimal newTotalAmount, Timestamp purchaseDate) {
@@ -161,58 +170,20 @@ public class ExpenseService {
         updateExpense(expense);
     }
 
-    public Expense getExpenseByAmountAndDate(BigDecimal totalAmount, Timestamp purchaseDate) {
-        return expenseDao.findByTotalAmountAndDate(totalAmount, purchaseDate)
-                .orElseThrow(() -> new ExpenseNotFoundException("Расход с не был найден"));
-    }
+    public void updateSalaryExpense(BigDecimal oldAmount, BigDecimal newAmount, LocalDate paymentDate) {
+        try {
+            Timestamp paymentTimestamp = convertToTimestamp(paymentDate);
+            Expense expense = getExpenseByAmountAndDate(oldAmount, paymentTimestamp);
+            expense.setTotalAmount(newAmount);
 
-    public boolean updateExpense(Expense expense) {
-        if (expense.getId() == null) {
-            throw new IllegalArgumentException("ID расхода не может быть пустым при обновлении");
-        }
-
-        validateExpense(expense);
-
-        Expense oldExpense = getExpenseById(expense.getId());
-
-        boolean updated = expenseDao.update(expense);
-        if (updated) {
-            LoggerUtil.info("Обновлен расход с ID " + expense.getId() +
-                    " по категории '" + expense.getCategory().name() +
-                    "', сумма: " + expense.getTotalAmount());
-
-            try {
-                if (oldExpense.getTotalAmount().compareTo(expense.getTotalAmount()) != 0) {
-                    budgetService.updateMonthlyBudgetExpense(
-                            oldExpense.getExpenseDate().toLocalDateTime().toLocalDate(), 
-                            oldExpense.getTotalAmount().negate());
-
-                    budgetService.updateMonthlyBudgetExpense(
-                            expense.getExpenseDate().toLocalDateTime().toLocalDate(), 
-                            expense.getTotalAmount());
-                }
-                else if (!oldExpense.getExpenseDate().equals(expense.getExpenseDate())) {
-                    budgetService.updateMonthlyBudgetExpense(
-                            oldExpense.getExpenseDate().toLocalDateTime().toLocalDate(), 
-                            oldExpense.getTotalAmount().negate());
-
-                    budgetService.updateMonthlyBudgetExpense(
-                            expense.getExpenseDate().toLocalDateTime().toLocalDate(), 
-                            expense.getTotalAmount());
-                }
-            } catch (Exception e) {
-                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            boolean updated = updateExpense(expense);
+            if (updated) {
+                info("Обновлен расход на зарплату: изменение суммы с " +
+                        oldAmount + " на " + newAmount);
             }
-        } else {
-            LoggerUtil.warn("Не удалось обновить расход с ID " + expense.getId());
+        } catch (Exception e) {
+            error("Ошибка при обновлении расхода на зарплату: " + e.getMessage(), e);
         }
-
-        return updated;
-    }
-
-    public void deletePurchaseExpense(BigDecimal totalCost, Timestamp purchaseDate) {
-        Expense expense = getExpenseByAmountAndDate(totalCost, purchaseDate);
-        deleteExpense(expense.getId());
     }
 
     public void deleteExpense(Long id) {
@@ -220,117 +191,85 @@ public class ExpenseService {
 
         boolean deleted = expenseDao.deleteById(id);
         if (deleted) {
-            LoggerUtil.info("Удален расход с ID " + id +
-                    " по категории '" + expense.getCategory().name() +
-                    "', сумма: " + expense.getTotalAmount());
-
-            try {
-                budgetService.updateMonthlyBudgetExpense(
-                        expense.getExpenseDate().toLocalDateTime().toLocalDate(), 
-                        expense.getTotalAmount().negate());
-            } catch (Exception e) {
-                LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
-            }
+            logExpenseOperation("Удален", expense);
+            updateBudgetAfterDelete(expense);
         } else {
-            LoggerUtil.warn("Не удалось удалить расход с ID " + id);
+            warn("Не удалось удалить расход с ID " + id);
         }
     }
 
-
-    public BigDecimal getTotalExpenseAmount(Timestamp startDate, Timestamp endDate) {
-        validateDateRange(startDate, endDate);
-
-        List<Expense> expenses;
-        try {
-            expenses = expenseDao.findByDateRange(startDate, endDate);
-        } catch (ExpenseNotFoundException e) {
-            return BigDecimal.ZERO;
-        }
-
-        return expenses.stream()
-                .map(Expense::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    public void deletePurchaseExpense(BigDecimal totalCost, Timestamp purchaseDate) {
+        Expense expense = getExpenseByAmountAndDate(totalCost, purchaseDate);
+        deleteExpense(expense.getId());
     }
 
-    public Map<ExpenseCategory, BigDecimal> getExpensesByCategory(Timestamp startDate, Timestamp endDate) {
-        validateDateRange(startDate, endDate);
-
-        List<Expense> expenses;
+    public void deleteSalaryExpense(BigDecimal amount, LocalDate paymentDate) {
         try {
-            expenses = expenseDao.findByDateRange(startDate, endDate);
-        } catch (ExpenseNotFoundException e) {
-            return new HashMap<>();
-        }
+            Timestamp paymentTimestamp = convertToTimestamp(paymentDate);
+            Expense expense = getExpenseByAmountAndDate(amount, paymentTimestamp);
+            deleteExpense(expense.getId());
 
-        Map<ExpenseCategory, BigDecimal> result = new HashMap<>();
-
-        for (Expense expense : expenses) {
-            ExpenseCategory category = expense.getCategory();
-            BigDecimal currentAmount = result.getOrDefault(category, BigDecimal.ZERO);
-            result.put(category, currentAmount.add(expense.getTotalAmount()));
-        }
-
-        return result;
-    }
-
-
-    public BigDecimal getMonthlyAverage(int numberOfMonths) {
-        if (numberOfMonths <= 0) {
-            throw new IllegalArgumentException("Количество месяцев должно быть положительным числом");
-        }
-
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusMonths(numberOfMonths);
-
-        Timestamp start = Timestamp.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        Timestamp end = Timestamp.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant());
-
-        BigDecimal totalAmount;
-        try {
-            totalAmount = getTotalExpenseAmount(start, end);
+            info("Удален расход на зарплату на сумму " + amount);
         } catch (Exception e) {
-            LoggerUtil.warn("Ошибка при расчете среднемесячных расходов: " + e.getMessage());
-            return BigDecimal.ZERO;
+            error("Ошибка при удалении расхода на зарплату: " + e.getMessage(), e);
         }
-
-        return totalAmount.divide(BigDecimal.valueOf(numberOfMonths), 2, RoundingMode.HALF_UP);
     }
 
+    private void prepareExpenseBeforeSave(Expense expense) {
+        if (expense.getExpenseDate() == null) {
+            expense.setExpenseDate(Timestamp.from(Instant.now()));
+        }
+
+        if (expense.getAccountant() == null) {
+            expense.setAccountant(userService.getCurrentUser());
+        }
+    }
+
+    private void logExpenseOperation(String operation, Expense expense) {
+        info(operation + " расход с ID " + expense.getId() +
+                " по категории '" + expense.getCategory().name() +
+                "', сумма: " + expense.getTotalAmount());
+    }
+
+    private void updateBudgetAfterAdd(Expense expense) {
+        try {
+            LocalDate expenseDate = extractLocalDate(expense);
+            budgetService.updateMonthlyBudgetExpense(expenseDate, expense.getTotalAmount());
+        } catch (Exception e) {
+            error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+        }
+    }
+
+    private void updateBudgetAfterUpdate(Expense oldExpense, Expense newExpense) {
+        try {
+            boolean amountChanged = !oldExpense.getTotalAmount().equals(newExpense.getTotalAmount());
+            boolean dateChanged = !oldExpense.getExpenseDate().equals(newExpense.getExpenseDate());
+
+            if (amountChanged || dateChanged) {
+                LocalDate oldDate = extractLocalDate(oldExpense);
+                budgetService.updateMonthlyBudgetExpense(oldDate, oldExpense.getTotalAmount().negate());
+
+                LocalDate newDate = extractLocalDate(newExpense);
+                budgetService.updateMonthlyBudgetExpense(newDate, newExpense.getTotalAmount());
+            }
+        } catch (Exception e) {
+            error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+        }
+    }
+
+    private void updateBudgetAfterDelete(Expense expense) {
+        try {
+            LocalDate expenseDate = extractLocalDate(expense);
+            budgetService.updateMonthlyBudgetExpense(expenseDate, expense.getTotalAmount().negate());
+        } catch (Exception e) {
+            error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+        }
+    }
 
     private void validateExpense(Expense expense) {
-        if (expense.getCategory() == null || expense.getCategory().id() == null) {
-            throw new IllegalArgumentException("Категория расхода должна быть указана");
-        }
-
-        if (expense.getTotalAmount() == null || expense.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Сумма расхода должна быть положительным числом");
-        }
-
+        Objects.requireNonNull(expense.getCategory(), "Категория расхода должна быть указана");
+        validatePositiveAmount(expense.getTotalAmount(), "Сумма должна быть положительным числом");
         categoryService.getExpenseCategoryById(expense.getCategory().id());
-
-        if (expense.getAccountant() != null && expense.getAccountant().getId() != null) {
-            userService.getUserById(expense.getAccountant().getId());
-        }
-    }
-
-    private void validateDateRange(Timestamp startDate, Timestamp endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
-        }
-
-        if (startDate.after(endDate)) {
-            throw new IllegalArgumentException("Дата начала не может быть позже даты окончания");
-        }
-    }
-
-    private List<Expense> findAndValidate(Supplier<List<Expense>> supplier, String errorMessage) {
-        List<Expense> expenses = supplier.get();
-
-        if (expenses.isEmpty()) {
-            LoggerUtil.warn(errorMessage);
-            throw new ExpenseNotFoundException(errorMessage);
-        }
-
-        return expenses;
+        userService.getUserById(expense.getAccountant().getId());
     }
 }

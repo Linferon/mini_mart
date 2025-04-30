@@ -3,18 +3,18 @@ package service;
 import dao.impl.MonthlyBudgetDao;
 import exception.nsee.BudgetNotFoundException;
 import model.MonthlyBudget;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.Date;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static java.math.BigDecimal.ZERO;
+import static util.DateTimeUtils.setupTimestamps;
+import static util.EntityUtil.findAndValidate;
+import static util.LoggerUtil.*;
+import static util.ValidationUtil.*;
 
 public class MonthlyBudgetService {
     private static MonthlyBudgetService instance;
@@ -62,18 +62,13 @@ public class MonthlyBudgetService {
         setupBudget(budget);
 
         Long id = budgetDao.save(budget);
-        if (id != null) {
-            LoggerUtil.info("Создан новый бюджет с ID " + id + " на " + budget.getBudgetDate());
-        }
+        info("Создан новый бюджет с ID " + id);
     }
 
     public void createBudget(LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses) {
-        if (budgetDate == null) {
-            throw new IllegalArgumentException("Дата бюджета должна быть указана");
-        }
-
-        validatePositiveAmount(plannedIncome, "Планируемый доход");
-        validatePositiveAmount(plannedExpenses, "Планируемые расходы");
+        validateDate(budgetDate, "Дата бюджета должна быть указана");
+        validatePositiveAmount(plannedIncome, "Планируемый доход должен быть положительным числом.");
+        validatePositiveAmount(plannedExpenses, "Планируемые расходы должны быть положительным числом.");
 
         MonthlyBudget budget = new MonthlyBudget(
                 budgetDate,
@@ -96,8 +91,6 @@ public class MonthlyBudgetService {
     }
 
     private MonthlyBudget createNewMonthlyBudget(LocalDate firstDayOfMonth) {
-        LoggerUtil.info("Создание нового месячного бюджета на " + firstDayOfMonth);
-
         MonthlyBudget budget = new MonthlyBudget(
                 null,
                 firstDayOfMonth,
@@ -131,8 +124,8 @@ public class MonthlyBudgetService {
     }
 
     public void updateActualValues(Long budgetId, BigDecimal actualIncome, BigDecimal actualExpenses) {
-        validatePositiveAmount(actualIncome, "Фактический доход");
-        validatePositiveAmount(actualExpenses, "Фактические расходы");
+        validatePositiveAmount(actualIncome, "Фактический доход должен быть положительным числом");
+        validatePositiveAmount(actualExpenses, "Фактические расходы должны быть положительным числом");
 
         MonthlyBudget budget = getBudgetById(budgetId);
         budget.setActualIncome(actualIncome);
@@ -140,11 +133,11 @@ public class MonthlyBudgetService {
 
         boolean updated = budgetDao.update(budget);
         if (updated) {
-            LoggerUtil.info("Обновлены фактические значения для бюджета с ID " + budgetId +
+            info("Обновлены фактические значения для бюджета с ID " + budgetId +
                     ": доход = " + actualIncome + ", расходы = " + actualExpenses +
                     ", чистый результат = " + budget.getNetResult());
         } else {
-            LoggerUtil.warn("Не удалось обновить фактические значения для бюджета с ID " + budgetId);
+            warn("Не удалось обновить фактические значения для бюджета с ID " + budgetId);
         }
     }
 
@@ -155,10 +148,10 @@ public class MonthlyBudgetService {
 
             updateActualValues(budget.getId(), newActualIncome, budget.getActualExpenses());
 
-            LoggerUtil.info("Обновлен месячный бюджет на " + date.withDayOfMonth(1) +
+            info("Обновлен месячный бюджет на " + date.withDayOfMonth(1) +
                     ", новый фактический доход: " + newActualIncome);
         } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
         }
     }
 
@@ -169,10 +162,10 @@ public class MonthlyBudgetService {
 
             updateActualValues(budget.getId(), budget.getActualIncome(), newActualExpenses);
 
-            LoggerUtil.info("Обновлен месячный бюджет на " + date.withDayOfMonth(1) +
+            info("Обновлен месячный бюджет на " + date.withDayOfMonth(1) +
                     ", новые фактические расходы: " + newActualExpenses);
         } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
+            error("Ошибка при обновлении месячного бюджета: " + e.getMessage(), e);
         }
     }
 
@@ -196,9 +189,9 @@ public class MonthlyBudgetService {
 
     private void logBudgetUpdate(boolean updated, MonthlyBudget budget) {
         if (updated) {
-            LoggerUtil.info("Обновлен бюджет с ID " + budget.getId() + " на " + budget.getBudgetDate());
+            info("Обновлен бюджет с ID " + budget.getId() + " на " + budget.getBudgetDate());
         } else {
-            LoggerUtil.warn("Не удалось обновить бюджет с ID " + budget.getId());
+            warn("Не удалось обновить бюджет с ID " + budget.getId());
         }
     }
 
@@ -207,55 +200,16 @@ public class MonthlyBudgetService {
             budget.setDirector(userService.getCurrentUser());
         }
 
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        if (budget.getCreatedAt() == null) {
-            budget.setCreatedAt(now);
-        }
-        if (budget.getUpdatedAt() == null) {
-            budget.setUpdatedAt(now);
-        }
-
-        if (budget.getActualIncome() == null) {
-            budget.setActualIncome(ZERO);
-        }
-        if (budget.getActualExpenses() == null) {
-            budget.setActualExpenses(ZERO);
-        }
+        setupTimestamps(budget);
     }
 
     private void validateBudget(MonthlyBudget budget) {
-        if (budget.getBudgetDate() == null) {
-            throw new IllegalArgumentException("Дата бюджета должна быть указана");
-        }
-
-        validatePositiveAmount(budget.getPlannedIncome(), "Планируемый доход");
-        validatePositiveAmount(budget.getPlannedExpenses(), "Планируемые расходы");
-
-        Optional.ofNullable(budget.getActualIncome())
-                .ifPresent(income -> validatePositiveAmount(income, "Фактический доход"));
-
-        Optional.ofNullable(budget.getActualExpenses())
-                .ifPresent(expenses -> validatePositiveAmount(expenses, "Фактические расходы"));
-
-        if (budget.getDirector() != null && budget.getDirector().getId() != null) {
-            userService.getUserById(budget.getDirector().getId());
-        }
-    }
-
-    private void validatePositiveAmount(BigDecimal amount, String fieldName) {
-        if (amount == null || amount.compareTo(ZERO) < 0) {
-            throw new IllegalArgumentException(fieldName + " должен быть неотрицательным числом");
-        }
-    }
-
-    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
-        }
-
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Дата начала не может быть позже даты окончания");
-        }
+        validateDate(budget.getBudgetDate(), "Дата бюджета должна быть указана");
+        validatePositiveAmount(budget.getPlannedIncome(), "Планируемый доход должен быть положительным числом");
+        validatePositiveAmount(budget.getPlannedExpenses(), "Планируемые расходы должны быть положительным числом");
+        validatePositiveAmount(budget.getActualIncome(), "Фактический доход должен быть положительным числом");
+        validatePositiveAmount(budget.getActualExpenses(), "Фактические расходы должен быть положительным числом");
+        userService.getUserById(budget.getDirector().getId());
     }
 
     private BigDecimal sumBudgetProperty(LocalDate startDate, LocalDate endDate,
@@ -288,17 +242,5 @@ public class MonthlyBudgetService {
 
     public BigDecimal getTotalActualExpenses(LocalDate startDate, LocalDate endDate) {
         return sumBudgetProperty(startDate, endDate, MonthlyBudget::getActualExpenses);
-    }
-
-
-    private List<MonthlyBudget> findAndValidate(Supplier<List<MonthlyBudget>> supplier, String errorMessage) {
-        List<MonthlyBudget> budgets = supplier.get();
-
-        if (budgets.isEmpty()) {
-            LoggerUtil.warn(errorMessage);
-            throw new BudgetNotFoundException(errorMessage);
-        }
-
-        return budgets;
     }
 }

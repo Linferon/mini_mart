@@ -4,21 +4,27 @@ import dao.impl.PayrollDao;
 import exception.nsee.PayrollNotFoundException;
 import model.Payroll;
 import model.User;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.Date;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.Objects;
+
+import static util.EntityUtil.findAndValidate;
+import static util.LoggerUtil.*;
+import static util.ValidationUtil.*;
 
 public class PayrollService {
     private static PayrollService instance;
-    private final PayrollDao payrollDao = new PayrollDao();
-    private final UserService userService = UserService.getInstance();
+    private final PayrollDao payrollDao;
+    private final UserService userService;
+    private final ExpenseService expenseService;
 
     private PayrollService() {
+        payrollDao = new PayrollDao();
+        userService = UserService.getInstance();
+        expenseService = ExpenseService.getInstance();
     }
 
     public static synchronized PayrollService getInstance() {
@@ -32,14 +38,13 @@ public class PayrollService {
         return findAndValidate(payrollDao::findAll, "Записи о зарплатах не найдены");
     }
 
-
     public Payroll getPayrollById(Long id) {
         return payrollDao.findById(id)
                 .orElseThrow(() -> new PayrollNotFoundException("Запись о зарплате с ID " + id + " не найдена"));
     }
 
     public List<Payroll> getUnpaidPayrolls() {
-       return findAndValidate(
+        return findAndValidate(
                 payrollDao::findUnpaidPayrolls,
                 "Нет невыплаченных зарплат!"
         );
@@ -54,173 +59,146 @@ public class PayrollService {
         );
     }
 
-    public Long createPayroll(Payroll payroll) {
+    public void createPayroll(Payroll payroll) {
         validatePayroll(payroll);
-
-        if (payroll.getAccountant() == null) {
-            payroll.setAccountant(userService.getCurrentUser());
-        }
-
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        if (payroll.getCreatedAt() == null) {
-            payroll.setCreatedAt(now);
-        }
-        if (payroll.getUpdatedAt() == null) {
-            payroll.setUpdatedAt(now);
-        }
-
         Long id = payrollDao.save(payroll);
-        if (id != null) {
-            LoggerUtil.info("Создана новая запись о зарплате с ID " + id +
-                    " для сотрудника " + payroll.getEmployee().getName() + " " +
-                    payroll.getEmployee().getSurname() + ", сумма: " + payroll.getTotalAmount());
-        }
 
-        return id;
+        info("Создана новая запись о зарплате с ID " + id);
+        if (Boolean.TRUE.equals(payroll.isPaid())) {
+            expenseService.addSalaryExpense(payroll.getTotalAmount(), payroll.getPaymentDate());
+        }
     }
 
-    public Long createPayroll(Long employeeId, Float hoursWorked, BigDecimal hourlyRate,
+    public void createPayroll(Long employeeId, Float hoursWorked, BigDecimal hourlyRate,
                               LocalDate periodStart, LocalDate periodEnd) {
-        User employee = userService.getUserById(employeeId);
-        validatePositiveFloat(hoursWorked);
-        validatePositiveAmount(hourlyRate);
+        validatePositiveFloat(hoursWorked, "Часы работы должны быть положительным числом");
+        validatePositiveAmount(hourlyRate, "Часовая ставка должна быть положительным числом");
         validateDateRange(periodStart, periodEnd);
 
         BigDecimal totalAmount = hourlyRate.multiply(BigDecimal.valueOf(hoursWorked));
-
+        User employee = userService.getUserById(employeeId);
         User accountant = userService.getCurrentUser();
-        Timestamp now = new Timestamp(System.currentTimeMillis());
 
         Payroll payroll = new Payroll(
-                null,
                 employee,
                 accountant,
                 hoursWorked,
                 hourlyRate,
                 totalAmount,
                 periodStart,
-                periodEnd,
-                null,
-                false,
-                now,
-                now
+                periodEnd
         );
 
-        return createPayroll(payroll);
+        createPayroll(payroll);
     }
 
-    public boolean updatePayroll(Payroll payroll) {
-        if (payroll.getId() == null) {
-            throw new IllegalArgumentException("ID записи о зарплате не может быть пустым при обновлении");
-        }
+    public boolean updatePayroll(Long payrollId, Long employeeId, Float hoursWorked, BigDecimal hourlyRate,
+                                 LocalDate periodStart, LocalDate periodEnd) {
 
-        validatePayroll(payroll);
+        Payroll existingPayroll = getPayrollById(payrollId);
+        User employee = userService.getUserById(employeeId);
+        BigDecimal oldTotalAmount = existingPayroll.getTotalAmount();
+        boolean wasPaid = Boolean.TRUE.equals(existingPayroll.isPaid());
+        LocalDate oldPaymentDate = existingPayroll.getPaymentDate() != null ?
+                existingPayroll.getPaymentDate() : null;
+        BigDecimal newTotalAmount = hourlyRate.multiply(BigDecimal.valueOf(hoursWorked));
 
-        getPayrollById(payroll.getId());
+        Payroll updatedPayroll = new Payroll(
+                payrollId,
+                employee,
+                existingPayroll.getAccountant(),
+                hoursWorked,
+                hourlyRate,
+                newTotalAmount,
+                periodStart,
+                periodEnd,
+                existingPayroll.getPaymentDate(),
+                existingPayroll.isPaid(),
+                existingPayroll.getCreatedAt(),
+                null
+        );
 
-        boolean updated = payrollDao.update(payroll);
-        if (updated) {
-            LoggerUtil.info("Обновлена запись о зарплате с ID " + payroll.getId() +
-                    " для сотрудника " + payroll.getEmployee().getName() + " " +
-                    payroll.getEmployee().getSurname() + ", сумма: " + payroll.getTotalAmount());
-        } else {
-            LoggerUtil.warn("Не удалось обновить запись о зарплате с ID " + payroll.getId());
+        boolean updated = updatePayroll(updatedPayroll);
+
+        if (updated && wasPaid && oldPaymentDate != null) {
+            try {
+                expenseService.updateSalaryExpense(oldTotalAmount, newTotalAmount, oldPaymentDate);
+            } catch (Exception e) {
+                error("Ошибка при обновлении расхода для зарплаты ID " + payrollId + ": " + e.getMessage(), e);
+            }
         }
 
         return updated;
     }
 
-    public boolean markAsPaid(Long payrollId, LocalDate paymentDate) {
+    public boolean updatePayroll(Payroll payroll) {
+        validatePayroll(payroll);
+
+        boolean updated = payrollDao.update(payroll);
+        if (updated) {
+            info("Обновлена запись о зарплате с ID " + payroll.getId());
+        } else {
+            warn("Не удалось обновить запись о зарплате с ID " + payroll.getId());
+        }
+
+        return updated;
+    }
+
+    public void markAsPaid(Long payrollId, LocalDate paymentDate) {
         Payroll payroll = getPayrollById(payrollId);
 
         if (Boolean.TRUE.equals(payroll.isPaid())) {
-            LoggerUtil.warn("Запись о зарплате с ID " + payrollId + " уже помечена как выплаченная");
-            return false;
+            warn("Запись о зарплате с ID " + payrollId + " уже помечена как выплаченная");
+            return;
         }
 
         boolean updated = payrollDao.markAsPaid(payrollId, Date.valueOf(paymentDate));
         if (updated) {
-            LoggerUtil.info("Запись о зарплате с ID " + payrollId +
+            info("Запись о зарплате с ID " + payrollId +
                     " помечена как выплаченная с датой выплаты " + paymentDate);
-        } else {
-            LoggerUtil.warn("Не удалось пометить запись о зарплате с ID " + payrollId + " как выплаченную");
-        }
 
-        return updated;
+            Payroll updatedPayroll = getPayrollById(payrollId);
+            expenseService.addSalaryExpense(updatedPayroll.getTotalAmount(), updatedPayroll.getPaymentDate());
+        } else {
+            warn("Не удалось пометить запись о зарплате с ID " + payrollId + " как выплаченную");
+        }
     }
 
-    public boolean deletePayroll(Long id) {
+    public void deletePayroll(Long id) {
         Payroll payroll = getPayrollById(id);
 
-        if (Boolean.TRUE.equals(payroll.isPaid())) {
-            throw new IllegalStateException("Невозможно удалить уже выплаченную зарплату");
-        }
+        boolean deleted;
+        boolean isPaid = Boolean.TRUE.equals(payroll.isPaid());
 
-        boolean deleted = payrollDao.deleteById(id);
-        if (deleted) {
-            LoggerUtil.info("Удалена запись о зарплате с ID " + id +
-                    " для сотрудника " + payroll.getEmployee().getName() + " " +
-                    payroll.getEmployee().getSurname());
+        if (isPaid) {
+            BigDecimal totalAmount = payroll.getTotalAmount();
+            LocalDate paymentDate = payroll.getPaymentDate();
+
+            deleted = payrollDao.deleteById(id);
+
+            if (deleted) {
+                try {
+                    expenseService.deleteSalaryExpense(totalAmount, paymentDate);
+                } catch (Exception e) {
+                    error("Ошибка при удалении связанных записей для зарплаты ID " + id + ": " + e.getMessage(), e);
+                }
+            }
         } else {
-            LoggerUtil.warn("Не удалось удалить запись о зарплате с ID " + id);
+            deleted = payrollDao.deleteById(id);
         }
 
-        return deleted;
+        if (deleted) {
+            info("Удалена запись о зарплате с ID " + id);
+        } else {
+            warn("Не удалось удалить запись о зарплате с ID " + id);
+        }
     }
 
     private void validatePayroll(Payroll payroll) {
-        if (payroll.getEmployee() == null || payroll.getEmployee().getId() == null) {
-            throw new IllegalArgumentException("Сотрудник должен быть указан");
-        }
-
+        Objects.requireNonNull(payroll);
         validatePositiveFloat(payroll.getHoursWorked());
         validatePositiveAmount(payroll.getHourlyRate());
-
-        if (payroll.getPeriodStart() == null || payroll.getPeriodEnd() == null) {
-            throw new IllegalArgumentException("Период должен быть указан полностью");
-        }
-
-        if (payroll.getPeriodStart().isAfter(payroll.getPeriodEnd())) {
-            throw new IllegalArgumentException("Дата начала периода не может быть позже даты окончания");
-        }
-
+        validateDateRange(payroll.getPeriodStart(), payroll.getPeriodEnd());
         userService.getUserById(payroll.getEmployee().getId());
-
-        if (payroll.getAccountant() != null && payroll.getAccountant().getId() != null) {
-            userService.getUserById(payroll.getAccountant().getId());
-        }
-    }
-
-    private void validatePositiveFloat(Float value) {
-        if (value == null || value <= 0) {
-            throw new IllegalArgumentException("Отработанные часы" + " должны быть положительным числом");
-        }
-    }
-
-    private void validatePositiveAmount(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Почасовая ставка" + " должна быть положительным числом");
-        }
-    }
-
-    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
-        }
-
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Дата начала не может быть позже даты окончания");
-        }
-    }
-
-    private List<Payroll> findAndValidate(Supplier<List<Payroll>> supplier, String errorMessage) {
-        List<Payroll> payrolls = supplier.get();
-
-        if (payrolls.isEmpty()) {
-            LoggerUtil.warn(errorMessage);
-            throw new PayrollNotFoundException(errorMessage);
-        }
-
-        return payrolls;
     }
 }

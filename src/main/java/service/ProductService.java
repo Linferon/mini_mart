@@ -1,22 +1,28 @@
 package service;
 
 import dao.impl.ProductDao;
-import exception.nsee.ProductNotFoundException;
 import model.Product;
-import util.LoggerUtil;
+import model.ProductCategory;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
-import java.util.function.Supplier;
+
+import static util.EntityUtil.findAndValidate;
+import static util.LoggerUtil.info;
+import static util.LoggerUtil.warn;
+import static util.ValidationUtil.*;
 
 public class ProductService {
     private static ProductService instance;
-    private final ProductDao productDao = new ProductDao();
-    private final ProductCategoryService productCategoryService = ProductCategoryService.getInstance();
+    private final ProductDao productDao;
+    private final ProductCategoryService productCategoryService;
 
-    private ProductService() {}
+    private ProductService() {
+        productDao = new ProductDao();
+        productCategoryService = ProductCategoryService.getInstance();
+    }
 
     public static synchronized ProductService getInstance() {
         if (instance == null) {
@@ -29,13 +35,14 @@ public class ProductService {
         return findAndValidate(productDao::findAll);
     }
 
-    
     public Product getProductById(Long id) {
         return productDao.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Продукт с ID " + id + " не найден"));
     }
 
-    public void addProduct(Product product) {
+    public void addProduct(String name, Long categoryId, BigDecimal buyPrice, BigDecimal sellPrice) {
+        ProductCategory category = productCategoryService.getCategoryById(categoryId);
+        Product product = new Product(null, name, category, buyPrice, sellPrice);
         validateProduct(product);
         productCategoryService.getCategoryById(product.getCategory().id());
 
@@ -48,7 +55,7 @@ public class ProductService {
         }
 
         Long id = productDao.save(product);
-        LoggerUtil.info("Добавлен новый продукт с ID " + id + ": " + product.getName());
+        info("Добавлен новый продукт с ID " + id + ": " + product.getName());
     }
 
     public void updateProduct(Product product) {
@@ -62,50 +69,27 @@ public class ProductService {
 
         boolean updated = productDao.update(product);
         if (updated) {
-            LoggerUtil.info("Обновлен продукт с ID " + product.getId() + ": " + product.getName());
+            info("Обновлен продукт с ID " + product.getId() + ": " + product.getName());
         } else {
-            LoggerUtil.warn("Не удалось обновить продукт с ID " + product.getId());
+            warn("Не удалось обновить продукт с ID " + product.getId());
         }
     }
-    
+
     public void deleteProduct(Long id) {
         getProductById(id);
         boolean deleted = productDao.deleteById(id);
 
         if (deleted) {
-            LoggerUtil.info("Удален продукт с ID " + id);
+            info("Удален продукт с ID " + id);
         } else {
-            LoggerUtil.warn("Не удалось удалить продукт с ID " + id);
+            warn("Не удалось удалить продукт с ID " + id);
         }
     }
 
     private void validateProduct(Product product) {
-        if (product.getName() == null || product.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Название продукта не может быть пустым");
-        }
-
-        if (product.getCategory() == null || product.getCategory().id() == null) {
-            throw new IllegalArgumentException("Категория продукта должна быть указана");
-        }
-
-        if (product.getBuyPrice() == null || product.getBuyPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Цена закупки должна быть неотрицательной");
-        }
-
-        if (product.getSellPrice() == null || product.getSellPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Цена продажи должна быть неотрицательной");
-        }
-    }
-
-    private List<Product> findAndValidate(Supplier<List<Product>> supplier) {
-        List<Product> products = supplier.get();
-
-        if (products.isEmpty()) {
-            LoggerUtil.warn("Продукты не были найдены!");
-            throw new ProductNotFoundException("Продукты не были найдены!");
-        }
-
-        LoggerUtil.info("Получено категорий: " + products.size());
-        return products;
+        validateString(product.getName(), "Название продукта не может быть пустым");
+        validateId(product.getCategory().id(), "Категория продукта должна быть указана");
+        validatePositiveAmount(product.getBuyPrice(), "Цена закупки должна быть положительной");
+        validatePositiveAmount(product.getSellPrice(), "Цена продажи должна быть неотрицательной");
     }
 }

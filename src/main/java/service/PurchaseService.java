@@ -6,24 +6,33 @@ import exception.StockUpdateException;
 import model.Product;
 import model.Purchase;
 import model.Stock;
-import util.LoggerUtil;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.function.Supplier;
+
+import static util.EntityUtil.findAndValidate;
+import static util.LoggerUtil.*;
+import static util.ValidationUtil.*;
 
 public class PurchaseService {
     private static PurchaseService instance;
-    private final PurchaseDao purchaseDao = new PurchaseDao();
-    private final ProductService productService = ProductService.getInstance();
-    private final StockService stockService = StockService.getInstance();
-    private final UserService userService = UserService.getInstance();
-    private final ExpenseService expenseService = ExpenseService.getInstance();
-    private final MonthlyBudgetService budgetService = MonthlyBudgetService.getInstance();
+    private final PurchaseDao purchaseDao;
+    private final ProductService productService;
+    private final StockService stockService;
+    private final UserService userService;
+    private final ExpenseService expenseService;
+    private final MonthlyBudgetService budgetService;
 
-    private PurchaseService() {}
+    private PurchaseService() {
+        purchaseDao = new PurchaseDao();
+        productService = ProductService.getInstance();
+        stockService = StockService.getInstance();
+        userService = UserService.getInstance();
+        expenseService = ExpenseService.getInstance();
+        budgetService = MonthlyBudgetService.getInstance();
+    }
 
     public static synchronized PurchaseService getInstance() {
         if (instance == null) {
@@ -32,24 +41,13 @@ public class PurchaseService {
         return instance;
     }
 
-    public List<Purchase> getAllPurchases() {
-        return findAndValidate(purchaseDao::findAll, "Закупки не найдены");
-    }
-
-
     public Purchase getPurchaseById(Long id) {
         return purchaseDao.findById(id)
                 .orElseThrow(() -> new PurchaseNotFoundException("Закупка с ID " + id + " не найдена"));
     }
 
     public List<Purchase> getPurchasesByDateRange(Timestamp startDate, Timestamp endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
-        }
-
-        if (startDate.after(endDate)) {
-            throw new IllegalArgumentException("Дата начала не может быть позже даты окончания");
-        }
+        validateDateRange(startDate, endDate);
 
         return findAndValidate(() -> purchaseDao.findByDateRange(startDate, endDate),
                 "Закупки за период с " + startDate + " по " + endDate + " не найдены");
@@ -58,47 +56,29 @@ public class PurchaseService {
     public void addPurchase(Purchase purchase) {
         validatePurchase(purchase);
 
-        if (purchase.getPurchaseDate() == null) {
-            purchase.setPurchaseDate(Timestamp.from(Instant.now()));
-        }
-
-        if (purchase.getStockKeeper() == null) {
-            purchase.setStockKeeper(userService.getCurrentUser());
-        }
-
         Long purchaseId = purchaseDao.save(purchase);
+        info("Добавлена новая закупка с ID " + purchaseId);
 
-        if (purchaseId != null) {
-            updateStockAfterPurchase(purchase.getProduct().getId(), purchase.getQuantity());
-
-            LoggerUtil.info("Добавлена новая закупка с ID " + purchaseId +
-                    " для продукта " + purchase.getProduct().getName() +
-                    ", количество: " + purchase.getQuantity());
-        }
+        updateStockAfterPurchase(purchase.getProduct().getId(), purchase.getQuantity());
 
         try {
             expenseService.addPurchaseExpense(purchase.getTotalCost());
-            LoggerUtil.info("Автоматически добавлен расход для закупки ID " + purchaseId);
+            info("Автоматически добавлен расход для закупки ID " + purchaseId);
 
-            budgetService.updateMonthlyBudgetExpense(purchase.getPurchaseDate().toLocalDateTime().toLocalDate(), purchase.getTotalCost());
+            LocalDate date = purchase.getPurchaseDate().toLocalDateTime().toLocalDate();
+            BigDecimal totalCost = purchase.getTotalCost();
+
+            budgetService.updateMonthlyBudgetExpense(date, totalCost);
         } catch (Exception e) {
-            LoggerUtil.error("Не удалось добавить расход для закупки ID " + purchaseId + ": " + e.getMessage(), e);
+            error("Не удалось добавить расход для закупки ID " + purchaseId + ": " + e.getMessage(), e);
         }
     }
 
 
     public void addPurchase(Long productId, Integer quantity, BigDecimal totalCost) {
-        if (productId == null) {
-            throw new IllegalArgumentException("ID продукта должен быть указан");
-        }
-
-        if (quantity == null || quantity <= 0) {
-            throw new IllegalArgumentException("Количество должно быть положительным числом");
-        }
-
-        if (totalCost == null || totalCost.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Общая стоимость должна быть положительным числом");
-        }
+        validateId(productId, "ID продукта должен быть указан");
+        validateQuantity(quantity);
+        validatePositiveAmount(totalCost, "Общая стоимость должна быть положительным числом");
 
         Product product = productService.getProductById(productId);
 
@@ -139,56 +119,43 @@ public class PurchaseService {
                 BigDecimal costDifference = updatePurchase.getTotalCost().subtract(existingPurchase.getTotalCost());
 
                 expenseService.updatePurchaseExpense(existingPurchase.getTotalCost(), updatePurchase.getTotalCost(), existingPurchase.getPurchaseDate());
-                LoggerUtil.info("Обновлена закупка с ID " + existingPurchase.getId());
+                info("Обновлена закупка с ID " + existingPurchase.getId());
 
                 if (costDifference.compareTo(BigDecimal.ZERO) != 0) {
                     budgetService.updateMonthlyBudgetExpense(existingPurchase.getPurchaseDate().toLocalDateTime().toLocalDate(), costDifference);
                 }
             } catch (Exception e) {
-                LoggerUtil.error("Не удалось обновить расход для закупки ID " + existingPurchase.getId() + ": " + e.getMessage(), e);
+                error("Не удалось обновить расход для закупки ID " + existingPurchase.getId() + ": " + e.getMessage(), e);
             }
         } else {
-            LoggerUtil.warn("Не удалось обновить закупку с ID " + existingPurchase.getId());
+            warn("Не удалось обновить закупку с ID " + existingPurchase.getId());
         }
     }
 
     public void deletePurchase(Long id) {
         Purchase purchase = getPurchaseById(id);
-
         boolean deleted = purchaseDao.deleteById(id);
 
         if (deleted) {
             updateStockAfterPurchaseDeletion(purchase.getProduct().getId(), purchase.getQuantity());
-            LoggerUtil.info("Удалена закупка с ID " + id);
+            info("Удалена закупка с ID " + id);
 
             try {
                 expenseService.deletePurchaseExpense(purchase.getTotalCost(), purchase.getPurchaseDate());
                 budgetService.updateMonthlyBudgetExpense(purchase.getPurchaseDate().toLocalDateTime().toLocalDate(), purchase.getTotalCost().negate());
             } catch (Exception e) {
-                LoggerUtil.error("Не удалось удалить расход для закупки ID " + id + ": " + e.getMessage(), e);
+                error("Не удалось удалить расход для закупки ID " + id + ": " + e.getMessage(), e);
             }
         } else {
-            LoggerUtil.warn("Не удалось удалить закупку с ID " + id);
+            warn("Не удалось удалить закупку с ID " + id);
         }
     }
 
     private void validatePurchase(Purchase purchase) {
-        if (purchase.getProduct() == null || purchase.getProduct().getId() == null) {
-            throw new IllegalArgumentException("Продукт должен быть указан");
-        }
-
-        if (purchase.getQuantity() == null || purchase.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Количество должно быть положительным числом");
-        }
-
-        if (purchase.getTotalCost() == null || purchase.getTotalCost().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Общая стоимость должна быть положительным числом");
-        }
+        validateQuantity(purchase.getQuantity());
+        validatePositiveAmount(purchase.getTotalCost(), "Общая стоимость должна быть положительным числом");
         productService.getProductById(purchase.getProduct().getId());
-
-        if (purchase.getStockKeeper() != null && purchase.getStockKeeper().getId() != null) {
-            userService.getUserById(purchase.getStockKeeper().getId());
-        }
+        userService.getUserById(purchase.getStockKeeper().getId());
     }
 
     private void updateStockAfterPurchase(Long productId, Integer quantity) {
@@ -198,7 +165,7 @@ public class PurchaseService {
             int newQuantity = stock.getQuantity() + quantity;
             stockService.updateStockQuantity(productId, newQuantity);
 
-            LoggerUtil.info("Обновлено количество товара с ID " + productId + " на складе: " + newQuantity);
+            info("Обновлено количество товара с ID " + productId + " на складе: " + newQuantity);
 
         } catch (Exception e) {
             Stock newStock = new Stock(
@@ -207,7 +174,7 @@ public class PurchaseService {
             );
 
             stockService.addStock(newStock);
-            LoggerUtil.info("Добавлен новый товар с ID " + productId + " на склад, количество: " + quantity);
+            info("Добавлен новый товар с ID " + productId + " на склад, количество: " + quantity);
         }
     }
 
@@ -216,17 +183,15 @@ public class PurchaseService {
             Stock stock = stockService.getStockByProductId(productId);
 
             int newQuantity = stock.getQuantity() + quantityDifference;
-
             if (newQuantity < 0) {
                 throw new IllegalStateException("Невозможно обновить закупку: недостаточно товара на складе");
             }
 
             stockService.updateStockQuantity(productId, newQuantity);
-
-            LoggerUtil.info("Обновлено количество товара с ID " + productId +
+            info("Обновлено количество товара с ID " + productId +
                     " на складе после изменения закупки: " + newQuantity);
         } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении количества товара на складе: " + e.getMessage(), e);
+            error("Ошибка при обновлении количества товара на складе: " + e.getMessage(), e);
             throw new StockUpdateException("Ошибка при обновлении количества товара на складе");
         }
     }
@@ -234,32 +199,13 @@ public class PurchaseService {
     private void updateStockAfterPurchaseDeletion(Long productId, Integer quantity) {
         try {
             Stock stock = stockService.getStockByProductId(productId);
-
-            int newQuantity = stock.getQuantity() - quantity;
-
-            if (newQuantity < 0) {
-                LoggerUtil.warn("После удаления закупки количество товара с ID " +
-                        productId + " стало бы отрицательным. Устанавливаем 0.");
-                newQuantity = 0;
-            }
-
+            int newQuantity = Math.max(stock.getQuantity() - quantity, 0);
             stockService.updateStockQuantity(productId, newQuantity);
 
-            LoggerUtil.info("Обновлено количество товара с ID " + productId +
+            info("Обновлено количество товара с ID " + productId +
                     " на складе после удаления закупки: " + newQuantity);
         } catch (Exception e) {
-            LoggerUtil.error("Ошибка при обновлении количества товара на складе: " + e.getMessage(), e);
+            error("Ошибка при обновлении количества товара на складе: " + e.getMessage(), e);
         }
-    }
-
-    private List<Purchase> findAndValidate(Supplier<List<Purchase>> supplier, String errorMessage) {
-        List<Purchase> purchases = supplier.get();
-
-        if (purchases.isEmpty()) {
-            LoggerUtil.warn(errorMessage);
-            throw new PurchaseNotFoundException(errorMessage);
-        }
-
-        return purchases;
     }
 }
