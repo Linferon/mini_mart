@@ -155,7 +155,9 @@ public class PurchaseService {
         validateQuantity(purchase.getQuantity());
         validatePositiveAmount(purchase.getTotalCost(), "Общая стоимость должна быть положительным числом");
         productService.getProductById(purchase.getProduct().getId());
-        userService.getUserById(purchase.getStockKeeper().getId());
+        if(purchase.getStockKeeper() == null){
+            purchase.setStockKeeper(userService.getCurrentUser());
+        }
     }
 
     private void updateStockAfterPurchase(Long productId, Integer quantity) {

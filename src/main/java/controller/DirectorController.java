@@ -175,7 +175,8 @@ public class DirectorController extends BaseController {
 
         private void toggleEmployeeStatus() {
             ExceptionHandler.execute(() -> {
-                viewAllEmployees();
+                List<User> users = userService.getAllUsers();
+                showEntitiesTable(users, "Все сотрудники");
                 Long userId = getLongInput("Введите ID сотрудника: ");
                 User user = userService.getUserById(userId);
 

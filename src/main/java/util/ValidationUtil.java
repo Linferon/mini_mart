@@ -19,12 +19,13 @@ public class ValidationUtil {
             throw new IllegalArgumentException(message);
         }
     }
+
     public static void validateQuantity(Integer quantity) {
         validateQuantity(quantity, "Количество товара не может быть отрицательным");
     }
 
     public static void validatePositiveFloat(Float value, String message) {
-        if (value == null || value <= 0) {
+        if (value <= 0) {
             throw new IllegalArgumentException(message);
         }
     }
@@ -34,13 +35,14 @@ public class ValidationUtil {
     }
 
     public static void validatePositiveAmount(BigDecimal amount, String message) {
-        if (amount == null || amount.compareTo(ZERO) < 0) {
+        if (amount == null) return;
+        if (amount.compareTo(ZERO) < 0) {
             throw new IllegalArgumentException(message);
         }
     }
 
     public static void validatePositiveAmount(BigDecimal amount) {
-        validatePositiveAmount(amount, "Значение должно быть положительным числом") ;
+        validatePositiveAmount(amount, "Значение должно быть положительным числом");
     }
 
     public static void validateId(Long id, String message) {
@@ -58,6 +60,7 @@ public class ValidationUtil {
             throw new IllegalArgumentException(message);
         }
     }
+
     public static void validateDateRange(Timestamp startDate, Timestamp endDate) {
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
@@ -67,6 +70,7 @@ public class ValidationUtil {
             throw new IllegalArgumentException("Дата начала не может быть позже даты окончания");
         }
     }
+
     public static void validateDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Даты начала и окончания периода должны быть указаны");
@@ -76,10 +80,10 @@ public class ValidationUtil {
             throw new IllegalArgumentException("Дата начала не может быть позже даты окончания");
         }
     }
+
     public static void validateString(String str, String message) {
-        if (str == null || str.trim().isEmpty()) {
+        if (str.trim().isEmpty()) {
             throw new IllegalArgumentException(message);
         }
     }
-
 }

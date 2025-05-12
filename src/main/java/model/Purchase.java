@@ -26,6 +26,7 @@ public class Purchase implements FormattableEntity {
         this.product = product;
         this.quantity = quantity;
         this.totalCost = totalCost;
+        this.purchaseDate = new Timestamp(System.currentTimeMillis());
     }
 
     public Purchase(Long id, Product product, Integer quantity, User stockKeeper, Timestamp purchaseDate, BigDecimal totalCost) {

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -114,7 +115,9 @@ public class ExpenseService {
         ExpenseCategory category = categoryService.getExpenseCategoryByName("Покупка товара");
         Expense expense = new Expense(
                 category,
-                totalAmount);
+                totalAmount,
+                Timestamp.valueOf(LocalDateTime.now()),
+                userService.getCurrentUser());
 
         addExpense(expense);
     }

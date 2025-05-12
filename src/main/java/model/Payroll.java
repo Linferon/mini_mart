@@ -39,6 +39,7 @@ public class Payroll implements FormattableEntity, TimestampedEntity {
         this.totalAmount = totalAmount;
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
+        this.isPaid = false;
     }
     public Payroll(Long id, User employee, User accountant, Float hoursWorked, BigDecimal hourlyRate, BigDecimal totalAmount,
                    LocalDate periodStart, LocalDate periodEnd, LocalDate paymentDate, Boolean isPaid,

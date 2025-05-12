@@ -30,6 +30,8 @@ public class MonthlyBudget implements FormattableEntity, TimestampedEntity {
         this.plannedIncome = plannedIncome;
         this.plannedExpenses = plannedExpenses;
         this.director = director;
+        this.actualIncome = BigDecimal.ZERO;
+        this.actualExpenses = BigDecimal.ZERO;
     }
 
     public MonthlyBudget(Long id, LocalDate budgetDate, BigDecimal plannedIncome, BigDecimal plannedExpenses,

@@ -97,7 +97,7 @@ public class UserDao extends Dao<User> {
                 user.getEmail(),
                 user.getPassword(),
                 user.getEnabled(),
-                user.getRole().name(),
+                user.getRole().id(),
                 now,
                 user.getId());
     }
